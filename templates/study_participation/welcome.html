@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}{{ study.title }} - Welcome{% endblock %}
+
+{% block content %}
+<div class="study-welcome-container">
+    <div class="welcome-card">
+        <div class="study-header">
+            <h1>{{ study.title }}</h1>
+            <p class="study-subtitle">{{ study.background }}</p>
+        </div>
+
+        <div class="study-info">
+            <div class="info-section">
+                <h3>About This Study</h3>
+                <p>{{ study.orientation_text }}</p>
+            </div>
+
+            <div class="info-section">
+                <h3>What You'll Do</h3>
+                <ul class="task-list">
+                    <li>Answer a few optional demographic questions</li>
+                    <li>Complete {{ study.iped_parameters.tasks_per_consumer }} rating tasks</li>
+                    <li>Rate elements on a scale from {{ study.rating_scale.min_value }} to {{ study.rating_scale.max_value }}</li>
+                    <li>Each task will take approximately 1-3 minutes</li>
+                </ul>
+            </div>
+
+            <div class="info-section">
+                <h3>Important Notes</h3>
+                <ul class="important-list">
+                    <li>Your participation is completely anonymous</li>
+                    <li>No personal information will be collected</li>
+                    <li>You can leave the study at any time</li>
+                    <li>Your responses help advance research in this field</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="consent-section">
+            <h3>Consent to Participate</h3>
+            <p>By clicking "Start Study", you agree to participate in this research study. Your participation is voluntary and you may withdraw at any time.</p>
+        </div>
+
+        <div class="welcome-actions">
+            <button id="startStudyBtn" class="btn btn--primary btn-large">
+                <span class="btn-icon">🚀</span>
+                Start Study
+            </button>
+            <a href="{{ url_for('index') }}" class="btn btn--secondary">Return to Home</a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('startStudyBtn').addEventListener('click', async function() {
+    const button = this;
+    button.disabled = true;
+    button.innerHTML = '<span class="btn-icon">⏳</span> Starting...';
+    
+    try {
+        const response = await fetch(`/study/{{ study.share_token }}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Redirect to personal info page
+            window.location.href = "{{ url_for('study_participation.personal_info', share_token=study.share_token) }}";
+        } else {
+            alert('Error starting study: ' + data.error);
+            button.disabled = false;
+            button.innerHTML = '<span class="btn-icon">🚀</span> Start Study';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error starting study. Please try again.');
+        button.disabled = false;
+        button.innerHTML = '<span class="btn-icon">🚀</span> Start Study';
+    }
+});
+</script>
+{% endblock %}

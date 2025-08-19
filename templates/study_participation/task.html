@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Task {{ task_index + 1 }} - {{ study.title }}{% endblock %}
+
+{% block content %}
+<div class="task-container">
+    <!-- Progress Bar -->
+    <div class="task-header">
+        <div class="task-progress">
+            {% for i in range(total_tasks) %}
+                <div class="progress-step">
+                    <div class="progress-circle {% if i < task_index %}completed{% elif i == task_index %}active{% else %}pending{% endif %}">
+                        {{ i + 1 }}
+                    </div>
+                    <span class="progress-label">Task {{ i + 1 }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Task Content -->
+    <div class="task-content">
+        <h1 class="task-title">{{ study.main_question }}</h1>
+        <p class="task-instruction">Please rate the following elements on the scale below:</p>
+
+        <!-- Study Elements -->
+        <div class="elements-grid">
+            {% for element in visible_elements %}
+                <div class="element-card" data-element-id="{{ element.element_id }}">
+                    <div class="element-header">
+                        <div class="element-icon">{{ loop.index }}</div>
+                        <div class="element-info">
+                            <h4>{{ element.name }}</h4>
+                            {% if element.description %}
+                                <p>{{ element.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="element-content">
+                        {% if element.element_type == 'image' %}
+                            <img src="{{ url_for('static', filename='uploads/' + element.content) }}" 
+                                 alt="{{ element.alt_text or element.name }}"
+                                 class="element-image">
+                        {% else %}
+                            <div class="element-text">{{ element.content }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="rating-section">
+                        <label class="rating-label">Rate this element:</label>
+                        <div class="rating-scale">
+                            {% for i in range(study.rating_scale.min_value, study.rating_scale.max_value + 1) %}
+                                <div class="rating-option" data-rating="{{ i }}" data-element="{{ element.element_id }}">
+                                    <div class="rating-circle">{{ i }}</div>
+                                    <span class="rating-label">
+                                        {% if i == study.rating_scale.min_value %}{{ study.rating_scale.min_label }}
+                                        {% elif i == study.rating_scale.max_value %}{{ study.rating_scale.max_label }}
+                                        {% else %}{{ i }}{% endif %}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Task Navigation -->
+        <div class="task-navigation">
+            {% if task_index > 0 %}
+                <a href="{{ url_for('study_participation.task_page', share_token=study.share_token, task_index=task_index-1) }}" 
+                   class="btn btn--secondary">
+                    <span class="btn-icon">⬅️</span>
+                    Previous Task
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Task Timer Display (Optional) -->
+    <div class="task-timer">
+        <span class="timer-label">Time on this task:</span>
+        <span id="taskTimer" class="timer-value">0:00</span>
+    </div>
+</div>
+
+<script>
+// Initialize TaskTimer
+let taskTimer;
+let taskStartTime;
+
+// Start timing when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    taskStartTime = new Date();
+    
+
+    
+    // Initialize TaskTimer
+    taskTimer = new TaskTimer('{{ study.id }}', '{{ current_task.task_id }}', '{{ study.share_token }}');
+    taskTimer.startTask();
+    
+    // Start visual timer
+    startVisualTimer();
+    
+    // Check if all elements are rated
+    checkRatingCompletion();
+});
+
+// Visual timer update
+function startVisualTimer() {
+    setInterval(() => {
+        const elapsed = Math.floor((new Date() - taskStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        document.getElementById('taskTimer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }, 1000);
+}
+
+// Check rating completion and auto-advance
+function checkRatingCompletion() {
+    const ratingOptions = document.querySelectorAll('.rating-option');
+    
+    ratingOptions.forEach(option => {
+        option.addEventListener('click', async function() {
+            // Remove selected class from all options
+            ratingOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Add selected class to clicked option
+            this.classList.add('selected');
+            
+            // Get the selected rating
+            const taskRating = parseInt(this.dataset.rating);
+            
+            // Show loading state
+            this.classList.add('loading');
+            
+            try {
+                // Complete current task
+                await taskTimer.completeTask({ task_rating: taskRating });
+                
+                // Auto-advance to next task
+                const currentTaskIndex = {{ task_index }};
+                const totalTasks = {{ total_tasks }};
+                
+                if (currentTaskIndex < totalTasks - 1) {
+                    // Go to next task
+                    const nextTaskUrl = "{{ url_for('study_participation.task_page', share_token=study.share_token, task_index=0) }}".replace('task_index=0', 'task_index=' + (currentTaskIndex + 1));
+                    window.location.href = nextTaskUrl;
+                } else {
+                    // All tasks completed, go to completion page
+                    window.location.href = "{{ url_for('study_participation.study_completed', share_token=study.share_token) }}";
+                }
+                
+            } catch (error) {
+                console.error('Error completing task:', error);
+                alert('Error completing task. Please try again.');
+                // Remove loading state on error
+                this.classList.remove('loading');
+            }
+        });
+    });
+}
+
+// Track element interactions
+document.querySelectorAll('.element-card').forEach(card => {
+    const elementId = card.dataset.elementId;
+    
+    // Track hover
+    card.addEventListener('mouseenter', () => {
+        if (taskTimer) {
+            taskTimer.trackElementInteraction(elementId, 'hover');
+        }
+    });
+    
+    // Track clicks
+    card.addEventListener('click', () => {
+        if (taskTimer) {
+            taskTimer.trackElementInteraction(elementId, 'click');
+        }
+    });
+});
+</script>
+
+<!-- Include TaskTimer script -->
+<script src="{{ url_for('static', filename='js/task-timer.js') }}"></script>
+{% endblock %}

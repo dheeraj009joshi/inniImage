@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Personal Information - {{ study.title }}{% endblock %}
+
+{% block content %}
+<div class="personal-info-container">
+    <div class="personal-info-header">
+        <h1 class="personal-info-title">Personal Information</h1>
+        <p class="personal-info-subtitle">Please provide some basic information about yourself to help with our research</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('study_participation.submit_personal_info', share_token=study.share_token) }}" class="personal-info-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <div class="question-section">
+            <h3 class="question-title">What is your age?</h3>
+            <div class="question-options">
+                <div class="option-item" onclick="selectOption(this, 'age', '18-24')">
+                    <input type="radio" name="age" value="18-24" class="option-radio">
+                    <label class="option-label">18-24 years</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'age', '25-34')">
+                    <input type="radio" name="age" value="25-34" class="option-radio">
+                    <label class="option-label">25-34 years</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'age', '35-44')">
+                    <input type="radio" name="age" value="35-44" class="option-radio">
+                    <label class="option-label">35-44 years</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'age', '45-54')">
+                    <input type="radio" name="age" value="45-54" class="option-radio">
+                    <label class="option-label">45-54 years</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'age', '55-64')">
+                    <input type="radio" name="age" value="55-64" class="option-radio">
+                    <label class="option-label">55-64 years</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'age', '65+')">
+                    <input type="radio" name="age" value="65+" class="option-radio">
+                    <label class="option-label">65+ years</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="question-section">
+            <h3 class="question-title">What is your gender?</h3>
+            <div class="question-options">
+                <div class="option-item" onclick="selectOption(this, 'gender', 'male')">
+                    <input type="radio" name="gender" value="male" class="option-radio">
+                    <label class="option-label">Male</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'gender', 'female')">
+                    <input type="radio" name="gender" value="female" class="option-radio">
+                    <label class="option-label">Female</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'gender', 'non-binary')">
+                    <input type="radio" name="gender" value="non-binary" class="option-radio">
+                    <label class="option-label">Non-binary</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'gender', 'prefer-not-to-say')">
+                    <input type="radio" name="gender" value="prefer-not-to-say" class="option-radio">
+                    <label class="option-label">Prefer not to say</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="question-section">
+            <h3 class="question-title">What is your highest level of education?</h3>
+            <div class="question-options">
+                <div class="option-item" onclick="selectOption(this, 'education', 'high-school')">
+                    <input type="radio" name="education" value="high-school" class="option-radio">
+                    <label class="option-label">High school or equivalent</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'education', 'some-college')">
+                    <input type="radio" name="education" value="some-college" class="option-radio">
+                    <label class="option-label">Some college or university</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'education', 'bachelors')">
+                    <input type="radio" name="education" value="bachelors" class="option-radio">
+                    <label class="option-label">Bachelor's degree</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'education', 'masters')">
+                    <input type="radio" name="education" value="masters" class="option-radio">
+                    <label class="option-label">Master's degree</label>
+                </div>
+                <div class="option-item" onclick="selectOption(this, 'education', 'doctorate')">
+                    <input type="radio" name="education" value="doctorate" class="option-radio">
+                    <label class="option-label">Doctorate or higher</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="personal-info-actions">
+            <button type="submit" class="btn btn--primary btn-large">
+                <span class="btn-icon">➡️</span>
+                Continue to Classification Questions
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function selectOption(optionItem, questionName, optionValue) {
+    // Remove selected class from all options in this question
+    const questionSection = optionItem.closest('.question-section');
+    questionSection.querySelectorAll('.option-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked option
+    optionItem.classList.add('selected');
+    
+    // Check the radio button
+    const radio = optionItem.querySelector('input[type="radio"]');
+    radio.checked = true;
+}
+
+// Handle form submission
+document.querySelector('.personal-info-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Check if all required fields are filled
+    const requiredFields = ['age', 'gender', 'education'];
+    const missingFields = [];
+    
+    requiredFields.forEach(field => {
+        const value = form.querySelector(`input[name="${field}"]:checked`);
+        if (!value) {
+            missingFields.push(field);
+        }
+    });
+    
+    if (missingFields.length > 0) {
+        alert('Please fill in all required fields: ' + missingFields.join(', '));
+        return;
+    }
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="btn-icon">⏳</span> Submitting...';
+    
+    try {
+        // Submit form data
+        const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams(new FormData(form))
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Redirect to classification questions
+            window.location.href = data.redirect_url;
+        } else {
+            throw new Error(data.error || 'Failed to submit personal info');
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error submitting personal info: ' + error.message);
+        
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+});
+</script>
+{% endblock %}

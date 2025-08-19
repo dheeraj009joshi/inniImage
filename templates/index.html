@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}MindgenomeImage - Professional IPED Study System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section" aria-labelledby="hero-title">
+    <div class="container">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 id="hero-title" class="hero-title">
+                    Professional IPED Study System
+                </h1>
+                <p class="hero-subtitle">
+                    Conduct cutting-edge research with our advanced Individual Parameter Estimation Design platform. 
+                    Create, manage, and analyze studies with enterprise-grade tools.
+                </p>
+                <div class="hero-actions">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('dashboard.index') }}" class="btn btn--primary btn--lg">
+                            <span class="btn-icon">📊</span>
+                            Go to Dashboard
+                        </a>
+                        <a href="{{ url_for('study_creation.step1a') }}" class="btn btn--outline btn--lg">
+                            <span class="btn-icon">➕</span>
+                            Create New Study
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn--primary btn--lg">
+                            <span class="btn-icon">🚀</span>
+                            Get Started Free
+                        </a>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn--outline btn--lg">
+                            <span class="btn-icon">🔑</span>
+                            Sign In
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-image">
+                    <div class="floating-card floating-card--1">
+                        <div class="card-icon">📊</div>
+                        <h3>Study Analytics</h3>
+                        <p>Real-time insights</p>
+                    </div>
+                    <div class="floating-card floating-card--2">
+                        <div class="card-icon">🎯</div>
+                        <h3>IPED Matrix</h3>
+                        <p>Balanced design</p>
+                    </div>
+                    <div class="floating-card floating-card--3">
+                        <div class="card-icon">📱</div>
+                        <h3>Responsive</h3>
+                        <p>Mobile optimized</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section" aria-labelledby="features-title">
+    <div class="container">
+        <div class="section-header">
+            <h2 id="features-title" class="section-title">
+                Powerful Features for Research Excellence
+            </h2>
+            <p class="section-subtitle">
+                Everything you need to conduct professional research studies with confidence
+            </p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="icon">🧠</span>
+                </div>
+                <h3 class="feature-title">Advanced IPED Algorithm</h3>
+                <p class="feature-description">
+                    Sophisticated Individual Parameter Estimation Design with balanced matrix generation 
+                    for optimal research outcomes.
+                </p>
+                <ul class="feature-list">
+                    <li>Balanced element distribution</li>
+                    <li>Customizable parameters</li>
+                    <li>Statistical validation</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="icon">📊</span>
+                </div>
+                <h3 class="feature-title">Real-time Analytics</h3>
+                <p class="feature-description">
+                    Monitor study progress with comprehensive dashboards and detailed performance metrics.
+                </p>
+                <ul class="feature-list">
+                    <li>Live response tracking</li>
+                    <li>Task timing analysis</li>
+                    <li>Completion rates</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="icon">🔄</span>
+                </div>
+                <h3 class="feature-title">Multi-step Creation</h3>
+                <p class="feature-description">
+                    Intuitive wizard-based study creation with step-by-step guidance and validation.
+                </p>
+                <ul class="feature-list">
+                    <li>Guided workflow</li>
+                    <li>Auto-save progress</li>
+                    <li>Smart validation</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="icon">📱</span>
+                </div>
+                <h3 class="feature-title">Mobile-First Design</h3>
+                <p class="feature-description">
+                    Responsive interface that works seamlessly across all devices and screen sizes.
+                </p>
+                <ul class="feature-list">
+                    <li>Touch-friendly controls</li>
+                    <li>Adaptive layouts</li>
+                    <li>Cross-platform compatibility</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="icon">🔒</span>
+                </div>
+                <h3 class="feature-title">Enterprise Security</h3>
+                <p class="feature-description">
+                    Bank-level security with data encryption, secure authentication, and privacy compliance.
+                </p>
+                <ul class="feature-list">
+                    <li>End-to-end encryption</li>
+                    <li>GDPR compliance</li>
+                    <li>Regular security audits</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <span class="icon">📈</span>
+                </div>
+                <h3 class="feature-title">Advanced Export</h3>
+                <p class="feature-description">
+                    Export your data in multiple formats with comprehensive analysis and reporting tools.
+                </p>
+                <ul class="feature-list">
+                    <li>JSON/CSV export</li>
+                    <li>Timing data included</li>
+                    <li>Custom report generation</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="how-it-works-section" aria-labelledby="how-it-works-title">
+    <div class="container">
+        <div class="section-header">
+            <h2 id="how-it-works-title" class="section-title">
+                How It Works
+            </h2>
+            <p class="section-subtitle">
+                Get your research study up and running in just a few simple steps
+            </p>
+        </div>
+        
+        <div class="steps-container">
+            <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3 class="step-title">Create Study</h3>
+                    <p class="step-description">
+                        Use our intuitive wizard to set up your study parameters, elements, and questions.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3 class="step-title">Generate Matrix</h3>
+                    <p class="step-description">
+                        Our advanced IPED algorithm creates a balanced task matrix for optimal research design.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3 class="step-title">Launch & Monitor</h3>
+                    <p class="step-description">
+                        Share your study with participants and monitor responses in real-time.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3 class="step-title">Analyze Results</h3>
+                    <p class="step-description">
+                        Export comprehensive data with detailed timing and interaction analytics.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section" aria-labelledby="cta-title">
+    <div class="container">
+        <div class="cta-content">
+            <h2 id="cta-title" class="cta-title">
+                Ready to Transform Your Research?
+            </h2>
+            <p class="cta-description">
+                Join thousands of researchers who trust MindgenomeImage for their IPED studies.
+            </p>
+            <div class="cta-actions">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('study_creation.step1a') }}" class="btn btn--primary btn--lg">
+                        <span class="btn-icon">🚀</span>
+                        Create Your First Study
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn--primary btn--lg">
+                        <span class="btn-icon">🎯</span>
+                        Start Free Trial
+                    </a>
+                    <a href="{{ url_for('contact') }}" class="btn btn--outline btn--lg">
+                        <span class="btn-icon">💬</span>
+                        Contact Sales
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="testimonials-section" aria-labelledby="testimonials-title">
+    <div class="container">
+        <div class="section-header">
+            <h2 id="testimonials-title" class="section-title">
+                Trusted by Leading Researchers
+            </h2>
+            <p class="section-subtitle">
+                See what our users have to say about MindgenomeImage
+            </p>
+        </div>
+        
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    <p class="testimonial-text">
+                        "MindgenomeImage has revolutionized how we conduct IPED studies. The interface is intuitive 
+                        and the results are consistently reliable."
+                    </p>
+                </div>
+                <div class="testimonial-author">
+                    <div class="author-avatar">👨‍🔬</div>
+                    <div class="author-info">
+                        <h4 class="author-name">Dr. Sarah Chen</h4>
+                        <p class="author-title">Research Director, Stanford University</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    <p class="testimonial-text">
+                        "The real-time analytics and export capabilities have made our research workflow 
+                        significantly more efficient and insightful."
+                    </p>
+                </div>
+                <div class="testimonial-author">
+                    <div class="author-avatar">👩‍🔬</div>
+                    <div class="author-info">
+                        <h4 class="author-name">Prof. Michael Rodriguez</h4>
+                        <p class="author-title">Principal Investigator, MIT</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    <p class="testimonial-text">
+                        "Excellent platform for conducting complex research studies. The support team is 
+                        responsive and the documentation is comprehensive."
+                    </p>
+                </div>
+                <div class="testimonial-author">
+                    <div class="author-avatar">👨‍🎓</div>
+                    <div class="author-info">
+                        <h4 class="author-name">Dr. Emily Watson</h4>
+                        <p class="author-title">Postdoctoral Researcher, Harvard</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+{% endblock %}

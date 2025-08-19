@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Classification Questions - {{ study.title }}{% endblock %}
+
+{% block content %}
+<div class="classification-container">
+    <div class="classification-header">
+        <h1 class="classification-title">Classification Questions</h1>
+        <p class="classification-subtitle">Please answer a few questions to help us understand your background</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('study_participation.submit_classification', share_token=study.share_token) }}" class="classification-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        {% for question in study.classification_questions %}
+            <div class="question-section">
+                <h3 class="question-title">{{ question.question_text }}</h3>
+                
+                {% if question.question_type == 'multiple_choice' %}
+                    <div class="question-options">
+                        {% for option in question.options %}
+                            <div class="option-item" onclick="selectOption(this, '{{ question.id }}', '{{ option }}')">
+                                <input type="radio" 
+                                       name="classification_{{ question.id }}" 
+                                       value="{{ option }}"
+                                       class="option-radio">
+                                <label class="option-label">{{ option }}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% elif question.question_type == 'text' %}
+                    <input type="text" 
+                           name="classification_{{ question.id }}" 
+                           class="study-form-control"
+                           placeholder="Enter your answer">
+                {% elif question.question_type == 'number' %}
+                    <input type="number" 
+                           name="classification_{{ question.id }}" 
+                           class="study-form-control"
+                           placeholder="Enter a number">
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <div class="classification-actions">
+            <button type="submit" class="btn btn--primary btn-large">
+                <span class="btn-icon">➡️</span>
+                Start Rating Tasks
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function selectOption(optionItem, questionId, optionValue) {
+    // Remove selected class from all options in this question
+    const questionSection = optionItem.closest('.question-section');
+    questionSection.querySelectorAll('.option-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked option
+    optionItem.classList.add('selected');
+    
+    // Check the radio button
+    const radio = optionItem.querySelector('input[type="radio']');
+    radio.checked = true;
+}
+
+// Handle form submission
+document.querySelector('.classification-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="btn-icon">⏳</span> Submitting...';
+    
+    try {
+        // Collect all answers
+        const answers = [];
+        const radioButtons = form.querySelectorAll('input[type="radio"]:checked');
+        const textInputs = form.querySelectorAll('input[type="text"]');
+        const numberInputs = form.querySelectorAll('input[type="number"]');
+        
+        // Process radio button answers
+        radioButtons.forEach(radio => {
+            const questionId = radio.name.replace('classification_', '');
+            const questionText = radio.closest('.question-section').querySelector('.question-title').textContent;
+            answers.push({
+                question_id: questionId,
+                question_text: questionText,
+                question_type: 'multiple_choice',
+                answer: radio.value,
+                time_spent: 0.0
+            });
+        });
+        
+        // Process text input answers
+        textInputs.forEach(input => {
+            if (input.value.trim()) {
+                const questionId = input.name.replace('classification_', '');
+                const questionText = input.closest('.question-section').querySelector('.question-title').textContent;
+                answers.push({
+                    question_id: questionId,
+                    question_text: questionText,
+                    question_type: 'text',
+                    answer: input.value.trim(),
+                    time_spent: 0.0
+                });
+            }
+        });
+        
+        // Process number input answers
+        numberInputs.forEach(input => {
+            if (input.value.trim()) {
+                const questionId = input.name.replace('classification_', '');
+                const questionText = input.closest('.question-section').querySelector('.question-title').textContent;
+                answers.push({
+                    question_id: questionId,
+                    question_text: questionText,
+                    question_type: 'number',
+                    answer: input.value.trim(),
+                    time_spent: 0.0
+                });
+            }
+        });
+        
+        // Submit answers
+        const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ answers: answers })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Redirect to first task
+            window.location.href = data.redirect_url;
+        } else {
+            throw new Error(data.error || 'Failed to submit answers');
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error submitting answers: ' + error.message);
+        
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+});
+</script>
+{% endblock %}

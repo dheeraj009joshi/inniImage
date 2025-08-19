@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MindgenomeImage - Professional IPED Study System">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    <title>{% block title %}MindgenomeImage{% endblock %}</title>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="{{ url_for('static', filename='css/base.css') }}" as="style">
+    <link rel="preload" href="{{ url_for('static', filename='css/components.css') }}" as="style">
+    <link rel="preload" href="{{ url_for('static', filename='css/utilities.css') }}" as="style">
+    <link rel="preload" href="{{ url_for('static', filename='js/base.js') }}" as="script">
+    
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/utilities.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/internal-pages.css') }}">
+    
+    <!-- Page-specific CSS -->
+    {% block extra_css %}{% endblock %}
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body class="app-body">
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- Header -->
+    <header class="app-header" role="banner">
+        <nav class="nav-container" role="navigation" aria-label="Main navigation">
+            <div class="nav-brand">
+                <a href="{{ url_for('index.index') }}" class="brand-link" aria-label="Home">
+                    <span class="brand-icon">🧠</span>
+                    <span class="brand-text">MindgenomeImage</span>
+                </a>
+            </div>
+            
+            <div class="nav-menu" id="nav-menu">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard.index') }}" class="nav-link">
+                        <span class="nav-icon">📊</span>
+                        Dashboard
+                    </a>
+                    <a href="{{ url_for('study_creation.step1a') }}" class="nav-link">
+                        <span class="nav-icon">➕</span>
+                        Create Study
+                    </a>
+                    
+                    <!-- User Menu -->
+                    <div class="user-menu" aria-haspopup="true">
+                        <button class="user-menu-toggle" aria-expanded="false">
+                            <span class="user-avatar">👤</span>
+                            <span class="user-name">{{ current_user.username }}</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <ul class="user-dropdown" role="menu">
+                            <li><a href="{{ url_for('auth.profile') }}" role="menuitem">Profile</a></li>
+                            <li><a href="{{ url_for('auth.change_password') }}" role="menuitem">Change Password</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a href="{{ url_for('auth.logout') }}" role="menuitem">Logout</a></li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="nav-link">
+                        <span class="nav-icon">🔑</span>
+                        Login
+                    </a>
+                    <a href="{{ url_for('auth.register') }}" class="nav-link">
+                        <span class="nav-icon">📝</span>
+                        Sign Up
+                    </a>
+                {% endif %}
+            </div>
+            
+            <!-- Mobile menu toggle -->
+            <button class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container" role="alert" aria-live="polite">
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}" data-auto-hide="true">
+                        <div class="flash-content">
+                            <span class="flash-icon">
+                                {% if category == 'success' %}✅
+                                {% elif category == 'error' %}❌
+                                {% elif category == 'warning' %}⚠️
+                                {% else %}ℹ️
+                                {% endif %}
+                            </span>
+                            <span class="flash-text">{{ message }}</span>
+                        </div>
+                        <button class="flash-close" aria-label="Close message">×</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" role="status" aria-live="polite">
+        <div class="loading-overlay-content">
+            <div class="loading-spinner loading-spinner--xl"></div>
+            <p class="loading-overlay-text">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" class="app-main" role="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer" role="contentinfo">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">MindgenomeImage</h3>
+                    <p class="footer-description">Professional IPED Study System for Research Excellence</p>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-subtitle">Quick Links</h4>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('index.index') }}">Home</a></li>
+                        <li><a href="{{ url_for('about') }}">About</a></li>
+                        <li><a href="{{ url_for('contact') }}">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-subtitle">Support</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 MindgenomeImage. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay" aria-hidden="true">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <p class="loading-text">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Core JavaScript -->
+    <script src="{{ url_for('static', filename='js/base.js') }}" defer></script>
+    
+    <!-- Page-specific JavaScript -->
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Initialize page -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize base functionality
+            if (typeof initializeBase === 'function') {
+                initializeBase();
+            }
+            
+            // Initialize page-specific functionality
+            if (typeof initializePage === 'function') {
+                initializePage();
+            }
+        });
+    </script>
+</body>
+</html>

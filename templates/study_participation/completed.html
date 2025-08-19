@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Study Completed - {{ study.title }}{% endblock %}
+
+{% block content %}
+<div class="completed-container">
+    <div class="completed-card">
+        <div class="completed-icon">🎉</div>
+        <h1 class="completed-title">Study Completed!</h1>
+        <p class="completed-message">Thank you for participating in our research. Your responses have been recorded and will help advance our understanding in this field.</p>
+        
+        <div class="completed-actions">
+            <a href="{{ url_for('index') }}" class="btn btn--primary">
+                <span class="btn-icon">🏠</span>
+                Return to Home
+            </a>
+            
+            {% if study.share_url %}
+                <a href="{{ study.share_url }}" class="btn btn--secondary">
+                    <span class="btn-icon">🔄</span>
+                    Participate Again
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

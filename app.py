@@ -13,7 +13,7 @@ import json
 from routes.index import index_bp
 from routes.auth import auth_bp
 from routes.study_creation import study_creation_bp
-from routes.study_participation import study_participation_bp
+from routes.study_participation import study_participation
 from routes.dashboard import dashboard_bp
 from routes.api import api_bp
     
@@ -82,7 +82,7 @@ def create_app(config_name='default'):
 
     app.register_blueprint(index_bp)
     app.register_blueprint(auth_bp)
-    app.register_blueprint(study_participation_bp)
+    app.register_blueprint(study_participation)
     app.register_blueprint(study_creation_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(api_bp)

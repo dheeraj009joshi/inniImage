@@ -1,482 +1,364 @@
-from flask import Blueprint, render_template, request, jsonify, session, current_app, abort, url_for, redirect
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from models.study import Study
-from models.response import StudyResponse, TaskSession, CompletedTask, ClassificationAnswer, ElementInteraction
+from models.response import StudyResponse
 from datetime import datetime
 import uuid
 import json
 
-study_participation_bp = Blueprint('study_participation', __name__, url_prefix='/study')
+study_participation = Blueprint('study_participation', __name__)
 
-@study_participation_bp.route('/<share_token>')
-def study_welcome(share_token):
-    """Study welcome page for anonymous respondents."""
-    study = Study.objects(share_token=share_token).first()
-    if not study:
-        abort(404)
-    
-    if study.status != 'active':
-        return render_template('study_participation/study_inactive.html', study=study)
-    
-    # Check if user already has a session
-    if 'study_session_id' in session and session['study_session_id']:
-        return redirect(url_for('study_participation.personal_info', share_token=share_token))
-    
-    return render_template('study_participation/welcome.html', study=study)
-
-@study_participation_bp.route('/<share_token>/start', methods=['POST'])
-def start_study(share_token):
-    """Start study participation and assign respondent ID."""
-    print("Starting study participation...")
-    study = Study.objects(share_token=share_token).first()
-    if not study or study.status != 'active':
-        return jsonify({'error': 'Study not found or inactive'}), 404
-    
-    # Generate unique session ID
-    session_id = str(uuid.uuid4())
-    
-    # Get next available respondent ID
-    respondent_id = study.get_available_respondent_id()
-    if respondent_id is None:
-        return jsonify({'error': 'Study is full'}), 400
-    
-    # Create study response
-    study_response = StudyResponse(
-        study=study,
-        session_id=session_id,
-        respondent_id=respondent_id,
-        total_tasks_assigned=study.iped_parameters.tasks_per_consumer,
-        session_start_time=datetime.utcnow(),
-        ip_address=request.remote_addr,
-        user_agent=request.headers.get('User-Agent', ''),
-        browser_info={
-            'accept_language': request.headers.get('Accept-Language', ''),
-            'accept_encoding': request.headers.get('Accept-Encoding', ''),
-            'user_agent': request.headers.get('User-Agent', '')
-        }
-    )
-    study_response.save()
-    
-    # Update study statistics
-    study.total_responses += 1
-    study.save()
-    
-    # Store session info
-    session['study_session_id'] = session_id
-    session['study_share_token'] = share_token
-    session['respondent_id'] = respondent_id
-    
-    # Make session permanent and save
-    session.permanent = True
-    session.modified = True
-    
-    return jsonify({
-        'success': True,
-        'session_id': session_id,
-        'respondent_id': respondent_id,
-        'redirect_url': url_for('study_participation.personal_info', share_token=share_token)
-    })
-
-@study_participation_bp.route('/<share_token>/personal-info')
-def personal_info(share_token):
-    """Personal information page."""
-    study = Study.objects(share_token=share_token).first()
-    if not study or study.status != 'active':
-        abort(404)
-    
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    if not study_response:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    return render_template('study_participation/personal_info.html', 
-                         study=study, study_response=study_response)
-
-@study_participation_bp.route('/<share_token>/personal-info/submit', methods=['POST'])
-def submit_personal_info(share_token):
-    """Submit personal information."""
-    study = Study.objects(share_token=share_token).first()
-    if not study or study.status != 'active':
-        return jsonify({'error': 'Study not found or inactive'}), 404
-    
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return jsonify({'error': 'No active session'}), 400
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    if not study_response:
-        return jsonify({'error': 'Study response not found'}), 400
-    
-    # Save personal information
-    personal_info = {
-        'age': request.form.get('age'),
-        'gender': request.form.get('gender'),
-        'education': request.form.get('education')
-    }
-    
-    study_response.personal_info = personal_info
-    study_response.save()
-    
-    return jsonify({
-        'success': True,
-        'redirect_url': url_for('study_participation.classification_questions', share_token=share_token)
-    })
-
-@study_participation_bp.route('/<share_token>/classification')
-def classification_questions(share_token):
-    """Classification questions page."""
-    study = Study.objects(share_token=share_token).first()
-    if not study or study.status != 'active':
-        abort(404)
-    
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    if not study_response:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    return render_template('study_participation/classification.html', 
-                         study=study, study_response=study_response)
-
-@study_participation_bp.route('/<share_token>/classification/submit', methods=['POST'])
-def submit_classification(share_token):
-    """Submit classification answers."""
-    study = Study.objects(share_token=share_token).first()
-    if not study or study.status != 'active':
-        return jsonify({'error': 'Study not found or inactive'}), 404
-    
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return jsonify({'error': 'No active session'}), 400
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    if not study_response:
-        return jsonify({'error': 'Study response not found'}), 400
-    
+@study_participation.route('/study/<study_id>/welcome')
+def welcome(study_id):
+    """Welcome page for study participation"""
     try:
+        study = Study.objects.get(_id=study_id)
+        
+        
+        if study.status != 'active':
+            return render_template('study_participation/study_inactive.html', study=study)
+        
+        # Initialize session for this study
+        session['study_id'] = str(study_id)
+        session['current_step'] = 'welcome'
+        session['study_data'] = {
+            'personal_info': {},
+            'classification_answers': [],
+            'task_ratings': [],
+            'start_time': datetime.utcnow().isoformat()
+        }
+        
+        return render_template('study_participation/welcome.html', study=study)
+        
+    except Study.DoesNotExist:
+        flash('Study not found.', 'error')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'Error starting study: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+@study_participation.route('/study/<study_id>/participate')
+def participate(study_id):
+    """Direct participation link - redirects to welcome"""
+    return redirect(url_for('study_participation.welcome', study_id=study_id))
+
+@study_participation.route('/participate/<share_token>')
+def participate_by_token(share_token):
+    """Access study participation by share token"""
+    try:
+        study = Study.objects.get(share_token=share_token)
+        
+        if study.status != 'active':
+            return render_template('study_participation/study_inactive.html', study=study)
+        
+        # Redirect to welcome page with study ID
+        return redirect(url_for('study_participation.welcome', study_id=str(study._id)))
+        
+    except Study.DoesNotExist:
+        flash('Study not found.', 'error')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'Error accessing study: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+@study_participation.route('/study/<study_id>/personal-info', methods=['GET', 'POST'])
+def personal_info(study_id):
+    """Personal information collection page"""
+    try:
+        study = Study.objects.get(_id=study_id)
+        
+        if study.status != 'active':
+            return redirect(url_for('study_participation.welcome', study_id=study_id))
+        
+        if request.method == 'POST':
+            # Get form data
+            birth_date = request.form.get('birth_date')
+            gender = request.form.get('gender')
+            
+            # Validate required fields
+            if not birth_date or not gender:
+                flash('Please fill in all required fields.', 'error')
+                return render_template('study_participation/personal_info.html', study=study)
+            
+            # Calculate age from birth date
+            try:
+                birth_date_obj = datetime.strptime(birth_date, '%Y-%m-%d')
+                age = (datetime.utcnow() - birth_date_obj).days // 365
+                if age < 13 or age > 120:
+                    flash('Please enter a valid age between 13 and 120.', 'error')
+                    return render_template('study_participation/personal_info.html', study=study)
+            except ValueError:
+                flash('Please enter a valid birth date.', 'error')
+                return render_template('study_participation/personal_info.html', study=study)
+            
+            # Store in session
+            session['study_data']['personal_info'] = {
+                'birth_date': birth_date,
+                'age': age,
+                'gender': gender
+            }
+            session['current_step'] = 'personal_info'
+            
+            # Redirect to classification questions
+            return redirect(url_for('study_participation.classification', study_id=study_id))
+        
+        # Get today's date for max date validation
+        today_date = datetime.utcnow().strftime('%Y-%m-%d')
+        return render_template('study_participation/personal_info.html', study=study, today_date=today_date)
+        
+    except Study.DoesNotExist:
+        flash('Study not found.', 'error')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('study_participation.welcome', study_id=study_id))
+
+@study_participation.route('/study/<study_id>/classification', methods=['GET', 'POST'])
+def classification(study_id):
+    """Classification questions page"""
+    try:
+        study = Study.objects.get(_id=study_id)
+        
+        if study.status != 'active':
+            return redirect(url_for('study_participation.welcome', study_id=study_id))
+        
+        # Check if personal info is completed
+        if not session.get('study_data', {}).get('personal_info'):
+            return redirect(url_for('study_participation.personal_info', study_id=study_id))
+        
+        if request.method == 'POST':
+            # Get classification answers
+            answers = []
+            for question in study.classification_questions:
+                answer = request.form.get(f'classification_{question.question_id}')
+                if answer:
+                    answers.append({
+                        'question_id': question.question_id,
+                        'question_text': question.question_text,
+                        'answer': answer,
+                        'answer_timestamp': datetime.utcnow().isoformat(),
+                        'time_spent_seconds': 0.0  # Will be calculated from frontend
+                    })
+            
+            # Store in session
+            session['study_data']['classification_answers'] = answers
+            session['current_step'] = 'classification'
+            
+            # Redirect to first task
+            return redirect(url_for('study_participation.task', study_id=study_id, task_number=1))
+        
+        return render_template('study_participation/classification.html', study=study)
+        
+    except Study.DoesNotExist:
+        flash('Study not found.', 'error')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('study_participation.personal_info', study_id=study_id))
+
+@study_participation.route('/study/<study_id>/task/<int:task_number>', methods=['GET', 'POST'])
+def task(study_id, task_number):
+    """Task interface page"""
+    try:
+        study = Study.objects.get(_id=study_id)
+        
+        if study.status != 'active':
+            return redirect(url_for('study_participation.welcome', study_id=study_id))
+        
+        # Check if previous steps are completed
+        if not session.get('study_data', {}).get('personal_info'):
+            return redirect(url_for('study_participation.personal_info', study_id=study_id))
+        if not session.get('study_data', {}).get('classification_answers'):
+            return redirect(url_for('study_participation.classification', study_id=study_id))
+        
+        # Get tasks from study - check if tasks exist
+        if not hasattr(study, 'tasks') or not study.tasks:
+            # Try to generate tasks if they don't exist
+            try:
+                if hasattr(study, 'generate_tasks'):
+                    study.generate_tasks()
+                    study.save()
+                else:
+                    flash('Study tasks not configured properly.', 'error')
+                    return redirect(url_for('study_participation.welcome', study_id=study_id))
+            except Exception as e:
+                flash(f'Error generating tasks: {str(e)}', 'error')
+                return redirect(url_for('study_participation.welcome', study_id=study_id))
+        
+        # Check if tasks were generated
+        if not hasattr(study, 'tasks') or not study.tasks:
+            flash('Study tasks could not be generated.', 'error')
+            return redirect(url_for('study_participation.welcome', study_id=study_id))
+        
+        # Get total tasks from IPED parameters
+        total_tasks = study.iped_parameters.tasks_per_consumer 
+        
+        if task_number < 1 or task_number > total_tasks:
+            flash('Invalid task number.', 'error')
+            return redirect(url_for('study_participation.welcome', study_id=study_id))
+        
+        # Get the specific task data - tasks are organized by respondent_id
+        # For anonymous participation, we'll use respondent_id 0
+        respondent_tasks = study.tasks.get("0", [])
+        if not respondent_tasks or task_number > len(respondent_tasks):
+            flash('Task data not found.', 'error')
+            return redirect(url_for('study_participation.welcome', study_id=study_id))
+        
+        current_task = respondent_tasks[task_number - 1]
+        
+        # For GET requests, just render the task page
+        # For POST requests (if any), handle them the same way
+        # The actual rating submission is now handled via JavaScript and sessionStorage
+        
+        # Initialize task start time in session if not exists
+        if 'task_start_times' not in session:
+            session['task_start_times'] = {}
+        
+        session['task_start_times'][str(task_number)] = datetime.utcnow().isoformat()
+        
+        return render_template('study_participation/task.html', 
+                           study=study, task_number=task_number, 
+                           total_tasks=total_tasks, current_task=current_task)
+        
+    except Study.DoesNotExist:
+        flash('Study not found.', 'error')
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('study_participation.welcome', study_id=study_id))
+
+@study_participation.route('/study/<study_id>/task-complete', methods=['POST'])
+def task_complete(study_id):
+    """Handle task completion data from sessionStorage"""
+    try:
+        study = Study.objects.get(_id=study_id)
+        
+        if study.status != 'active':
+            return {'error': 'Study not active'}, 400
+        
+        # Get task data from request
         data = request.get_json()
-        answers = data.get('answers', [])
+        if not data:
+            return {'error': 'No data provided'}, 400
         
-        # Process classification answers
-        for answer_data in answers:
-            answer = ClassificationAnswer(
-                question_id=answer_data['question_id'],
-                question_text=answer_data['question_text'],
-                answer=answer_data['answer'],
-                answer_timestamp=datetime.utcnow(),
-                time_spent_seconds=answer_data.get('time_spent', 0.0)
-            )
-            study_response.classification_answers.append(answer)
-        
-        study_response.save()
-        
-        return jsonify({
-            'success': True,
-            'redirect_url': url_for('study_participation.task_page', share_token=share_token, task_index=0)
+        # Store task data in session
+        task_ratings = session.get('study_data', {}).get('task_ratings', [])
+        task_ratings.append({
+            'task_number': data.get('task_number'),
+            'rating': data.get('rating'),
+            'timestamp': data.get('timestamp'),
+            'task_start_time': data.get('task_start_time'),
+            'task_end_time': data.get('task_end_time'),
+            'task_duration_seconds': data.get('task_duration_seconds'),
+            'task_data': data.get('task_data', {})
         })
+        session['study_data']['task_ratings'] = task_ratings
         
+        return {'success': True, 'message': 'Task data stored'}
+        
+    except Study.DoesNotExist:
+        return {'error': 'Study not found'}, 404
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return {'error': str(e)}, 500
 
-
-
-@study_participation_bp.route('/<share_token>/task/<int:task_index>')
-def task_page(share_token, task_index):
-    """Individual task page."""
-    study = Study.objects(share_token=share_token).first()
-    if not study or study.status != 'active':
-        abort(404)
-    
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    if not study_response:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    # Get respondent's tasks
-    respondent_tasks = study.get_respondent_tasks(study_response.respondent_id)
-    if not respondent_tasks or task_index >= len(respondent_tasks):
-        abort(404)
-    
-    current_task = respondent_tasks[task_index]
-    
-    # Get visible elements for this task
-    visible_elements = []
-    for element in study.elements:
-        if current_task['elements_shown'].get(element.element_id, 0) == 1:
-            visible_elements.append(element)
-    
-    return render_template('study_participation/task.html',
-                         study=study,
-                         study_response=study_response,
-                         current_task=current_task,
-                         visible_elements=visible_elements,
-                         task_index=task_index,
-                         total_tasks=len(respondent_tasks))
-
-@study_participation_bp.route('/<share_token>/task/<int:task_index>/start', methods=['POST'])
-def start_task(share_token, task_index):
-    """Start timing for a specific task."""
-    print(f"DEBUG: start_task called with share_token={share_token}, task_index={task_index}")
-    print(f"DEBUG: session contents: {dict(session)}")
-    print(f"DEBUG: request headers: {dict(request.headers)}")
-    print(f"DEBUG: request method: {request.method}")
-    print(f"DEBUG: request content type: {request.content_type}")
-    
+@study_participation.route('/study/<study_id>/completed')
+def completed(study_id):
+    """Study completion page"""
     try:
-        if request.is_json:
-            print(f"DEBUG: request JSON data: {request.get_json()}")
-        else:
-            print(f"DEBUG: request form data: {request.form}")
-            print(f"DEBUG: request data: {request.data}")
-    except Exception as e:
-        print(f"DEBUG: Error parsing request data: {e}")
-    
-    session_id = session.get('study_session_id')
-    print(f"DEBUG: session_id from session: {session_id}")
-    
-    if not session_id:
-        return jsonify({'error': 'No active session', 'debug': 'session_id is None'}), 400
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    print(f"DEBUG: study_response found: {study_response is not None}")
-    
-    if not study_response:
-        return jsonify({'error': 'Study response not found', 'debug': f'No response for session_id: {session_id}'}), 400
-    
-    study = study_response.study
-    
-    # Get respondent's tasks
-    respondent_tasks = study.get_respondent_tasks(study_response.respondent_id)
-    if not respondent_tasks or task_index >= len(respondent_tasks):
-        return jsonify({'error': 'Invalid task index'}), 400
-    
-    current_task = respondent_tasks[task_index]
-    
-    # Create or update task session
-    task_session = TaskSession.objects(
-        session_id=session_id,
-        task_id=current_task['task_id']
-    ).first()
-    
-    if not task_session:
-        task_session = TaskSession(
-            session_id=session_id,
-            task_id=current_task['task_id'],
-            study_response=study_response
-        )
-        task_session.add_page_transition('task_start')
-        task_session.save()
-    
-    # Update study response
-    study_response.current_task_index = task_index
-    study_response.last_activity = datetime.utcnow()
-    study_response.save()
-    
-    return jsonify({
-        'success': True,
-        'task_id': current_task['task_id'],
-        'start_time': datetime.utcnow().isoformat()
-    })
-
-@study_participation_bp.route('/<share_token>/task/<int:task_index>/complete', methods=['POST'])
-def complete_task(share_token, task_index):
-    """Complete a task and submit rating."""
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return jsonify({'error': 'No active session'}), 400
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    if not study_response:
-        return jsonify({'error': 'Study response not found'}), 400
-    
-    study = study_response.study
-    
-    try:
-        data = request.get_json()
-        rating = data.get('rating')
-        task_start_time = datetime.fromisoformat(data.get('task_start_time'))
-        element_interactions = data.get('element_interactions', [])
+        study = Study.objects.get(_id=study_id)
         
-        if not rating:
-            return jsonify({'error': 'Rating is required'}), 400
+        # Check if all data is available
+        study_data = session.get('study_data', {})
+        if not (study_data.get('personal_info') and 
+                study_data.get('classification_answers') and 
+                study_data.get('task_ratings')):
+            return redirect(url_for('study_participation.welcome', study_id=study_id))
         
-        # Get respondent's tasks
-        respondent_tasks = study.get_respondent_tasks(study_response.respondent_id)
-        if not respondent_tasks or task_index >= len(respondent_tasks):
-            return jsonify({'error': 'Invalid task index'}), 400
-        
-        current_task = respondent_tasks[task_index]
-        task_completion_time = datetime.utcnow()
-        task_duration = (task_completion_time - task_start_time).total_seconds()
-        
-        # Create completed task record
-        completed_task_data = {
-            'task_id': current_task['task_id'],
-            'respondent_id': study_response.respondent_id,
-            'task_index': task_index,
-            'elements_shown_in_task': current_task['elements_shown'],
-            'task_start_time': task_start_time,
-            'task_completion_time': task_completion_time,
-            'task_duration_seconds': task_duration,
-            'rating_given': rating,
-            'rating_timestamp': task_completion_time,
-            'element_interactions': []
-        }
-        
-        # Process element interactions
-        for interaction_data in element_interactions:
-            interaction = ElementInteraction(
-                element_id=interaction_data['element_id'],
-                view_time_seconds=interaction_data.get('view_time', 0.0),
-                hover_count=interaction_data.get('hover_count', 0),
-                click_count=interaction_data.get('click_count', 0),
-                first_view_time=datetime.fromisoformat(interaction_data.get('first_view_time')) if interaction_data.get('first_view_time') else None,
-                last_view_time=datetime.fromisoformat(interaction_data.get('last_view_time')) if interaction_data.get('last_view_time') else None
+        # Create study response
+        try:
+            # Calculate total time spent
+            start_time = datetime.fromisoformat(study_data['start_time'])
+            completion_time = datetime.utcnow()
+            total_time = (completion_time - start_time).total_seconds()
+            
+            # Create response with existing model structure
+            response = StudyResponse(
+                _id=str(uuid.uuid4()),
+                study=study,
+                session_id=str(uuid.uuid4()),
+                respondent_id=1,  # Default respondent ID
+                total_tasks_assigned=len(study_data['task_ratings']),
+                completed_tasks_count=len(study_data['task_ratings']),
+                session_start_time=start_time,
+                session_end_time=completion_time,
+                is_completed=True,
+                classification_answers=study_data['classification_answers'],
+                personal_info=study_data['personal_info'],
+                total_study_duration=total_time,
+                last_activity=completion_time
             )
-            completed_task_data['element_interactions'].append(interaction)
-        
-        # Add completed task to study response
-        study_response.add_completed_task(completed_task_data)
-        study_response.save()
-        
-        # Update task session
-        task_session = TaskSession.objects(
-            session_id=session_id,
-            task_id=current_task['task_id']
-        ).first()
-        
-        if task_session:
-            task_session.mark_completed()
-            task_session.save()
-        
-        # Check if study is completed
-        if study_response.completed_tasks_count >= study_response.total_tasks_assigned:
-            study_response.mark_completed()
-            study_response.save()
             
-            # Update study statistics
-            study.completed_responses += 1
-            study.save()
+            # Add completed tasks with proper timing data
+            for task_rating in study_data['task_ratings']:
+                # Get task timing from session if available
+                task_start_time = None
+                task_duration = 0.0
+                
+                if 'task_start_times' in session and str(task_rating['task_number']) in session['task_start_times']:
+                    try:
+                        task_start_time = datetime.fromisoformat(session['task_start_times'][str(task_rating['task_number'])])
+                        # Calculate duration from the stored start time
+                        if 'task_duration_seconds' in task_rating:
+                            task_duration = task_rating['task_duration_seconds']
+                        else:
+                            # Fallback: calculate from start time to completion
+                            task_duration = (completion_time - task_start_time).total_seconds()
+                    except:
+                        task_start_time = start_time  # Fallback
+                        task_duration = 0.0
+                else:
+                    task_start_time = start_time  # Fallback
+                    task_duration = 0.0
+                
+                task_data = {
+                    'task_id': f"task_{task_rating['task_number']}",
+                    'respondent_id': 1,
+                    'task_index': task_rating['task_number'] - 1,
+                    'elements_shown_in_task': task_rating['task_data'].get('elements_shown', {}),
+                    'task_start_time': task_start_time,
+                    'task_completion_time': completion_time,
+                    'task_duration_seconds': task_duration,
+                    'rating_given': task_rating['rating'],
+                    'rating_timestamp': datetime.fromisoformat(task_rating['timestamp'])
+                }
+                response.add_completed_task(task_data)
             
-            return jsonify({
-                'success': True,
-                'study_completed': True,
-                'redirect_url': url_for('study_participation.study_completed', share_token=share_token)
-            })
+            response.update_completion_percentage()
+            response.save()
+            
+            # Clear session data
+            session.pop('study_data', None)
+            session.pop('study_id', None)
+            session.pop('current_step', None)
+            
+            return render_template('study_participation/completed.html', study=study, response=response)
+            
+        except Exception as e:
+            flash(f'Error saving response: {str(e)}', 'error')
+            return redirect(url_for('study_participation.welcome', study_id=study_id))
         
-        # Move to next task
-        next_task_index = task_index + 1
-        if next_task_index < len(respondent_tasks):
-            return jsonify({
-                'success': True,
-                'study_completed': False,
-                'redirect_url': url_for('study_participation.task_page', 
-                                      share_token=share_token, task_index=next_task_index)
-            })
-        else:
-            # All tasks completed
-            study_response.mark_completed()
-            study_response.save()
-            
-            study.completed_responses += 1
-            study.save()
-            
-            return jsonify({
-                'success': True,
-                'study_completed': True,
-                'redirect_url': url_for('study_participation.study_completed', share_token=share_token)
-            })
-        
+    except Study.DoesNotExist:
+        flash('Study not found.', 'error')
+        return redirect(url_for('index'))
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('study_participation.welcome', study_id=study_id))
 
-@study_participation_bp.route('/<share_token>/completed')
-def study_completed(share_token):
-    """Study completion page."""
-    study = Study.objects(share_token=share_token).first()
-    if not study:
-        abort(404)
-    
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    if not study_response:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    # Clear session
-    session.pop('study_session_id', None)
-    session.pop('study_share_token', None)
-    session.pop('respondent_id', None)
-    
-    return render_template('study_participation/completed.html', 
-                         study=study, study_response=study_response)
-
-@study_participation_bp.route('/<share_token>/abandon', methods=['POST'])
-def abandon_study(share_token):
-    """Abandon study participation."""
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return jsonify({'error': 'No active session'}), 400
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    if not study_response:
-        return jsonify({'error': 'Study response not found'}), 400
-    
+@study_participation.route('/study/<study_id>/inactive')
+def study_inactive(study_id):
+    """Study inactive page"""
     try:
-        data = request.get_json()
-        reason = data.get('reason', 'User abandoned study')
-        
-        # Mark as abandoned
-        study_response.mark_abandoned(reason)
-        study_response.save()
-        
-        # Update study statistics
-        study = study_response.study
-        study.abandoned_responses += 1
-        study.save()
-        
-        # Clear session
-        session.pop('study_session_id', None)
-        session.pop('study_share_token', None)
-        session.pop('respondent_id', None)
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@study_participation_bp.route('/<share_token>/tracking', methods=['POST'])
-def track_interaction(share_token):
-    """Track element interactions and timing."""
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return jsonify({'error': 'No active session'}), 400
-    
-    try:
-        data = request.get_json()
-        interaction_type = data.get('type')  # 'view', 'hover', 'click'
-        element_id = data.get('element_id')
-        duration = data.get('duration', 0.0)
-        
-        if not interaction_type or not element_id:
-            return jsonify({'error': 'Missing interaction data'}), 400
-        
-        # Find task session
-        task_session = TaskSession.objects(session_id=session_id).order_by('-created_at').first()
-        if task_session:
-            task_session.add_element_interaction(element_id, interaction_type, duration)
-            task_session.save()
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        study = Study.objects.get(_id=study_id)
+        return render_template('study_participation/study_inactive.html', study=study)
+    except Study.DoesNotExist:
+        flash('Study not found.', 'error')
+        return redirect(url_for('index'))

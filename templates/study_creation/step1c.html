@@ -5,42 +5,7 @@
 {% block content %}
 <div class="study-creation-container">
     <!-- Progress Bar -->
-    <div class="step-progress">
-        <ul class="step-progress-list">
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1a</div>
-                <span class="step-progress-label">Basic Details</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1b</div>
-                <span class="step-progress-label">Study Type</span>
-            </li>
-            <li class="step-progress-item step-progress-item--active">
-                <div class="step-progress-circle">1c</div>
-                <span class="step-progress-label">Rating Scale</span>
-            </li>
-            <li class="step-progress-item">
-                <div class="step-progress-circle">2a</div>
-                <span class="step-progress-label">Elements</span>
-            </li>
-            <li class="step-progress-item">
-                <div class="step-progress-circle">2b</div>
-                <span class="step-progress-label">Questions</span>
-            </li>
-            <li class="step-progress-item">
-                <div class="step-progress-circle">2c</div>
-                <span class="step-progress-label">IPED Parameters</span>
-            </li>
-            <li class="step-progress-item">
-                <div class="step-progress-circle">3a</div>
-                <span class="step-progress-label">Generate Tasks</span>
-            </li>
-            <li class="step-progress-item">
-                <div class="step-progress-circle">3b</div>
-                <span class="step-progress-label">Launch</span>
-            </li>
-        </ul>
-    </div>
+            {{ study_progress_bar('1c', draft.get_step_data('1b').get('study_type', 'grid') if draft.get_step_data('1b') else 'grid', draft) }}
 
     <div class="step-content">
         <div class="step-header">

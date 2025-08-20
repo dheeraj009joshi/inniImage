@@ -19,13 +19,14 @@ def study_welcome(share_token):
     
     # Check if user already has a session
     if 'study_session_id' in session and session['study_session_id']:
-        return redirect(url_for('study_participation.study_orientation', share_token=share_token))
+        return redirect(url_for('study_participation.personal_info', share_token=share_token))
     
     return render_template('study_participation/welcome.html', study=study)
 
 @study_participation_bp.route('/<share_token>/start', methods=['POST'])
 def start_study(share_token):
     """Start study participation and assign respondent ID."""
+    print("Starting study participation...")
     study = Study.objects(share_token=share_token).first()
     if not study or study.status != 'active':
         return jsonify({'error': 'Study not found or inactive'}), 404
@@ -64,11 +65,15 @@ def start_study(share_token):
     session['study_share_token'] = share_token
     session['respondent_id'] = respondent_id
     
+    # Make session permanent and save
+    session.permanent = True
+    session.modified = True
+    
     return jsonify({
         'success': True,
         'session_id': session_id,
         'respondent_id': respondent_id,
-        'redirect_url': url_for('study_participation.classification_questions', share_token=share_token)
+        'redirect_url': url_for('study_participation.personal_info', share_token=share_token)
     })
 
 @study_participation_bp.route('/<share_token>/personal-info')
@@ -161,7 +166,6 @@ def submit_classification(share_token):
             answer = ClassificationAnswer(
                 question_id=answer_data['question_id'],
                 question_text=answer_data['question_text'],
-                question_type=answer_data['question_type'],
                 answer=answer_data['answer'],
                 answer_timestamp=datetime.utcnow(),
                 time_spent_seconds=answer_data.get('time_spent', 0.0)
@@ -178,23 +182,7 @@ def submit_classification(share_token):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@study_participation_bp.route('/<share_token>/orientation')
-def study_orientation(share_token):
-    """Study orientation page."""
-    study = Study.objects(share_token=share_token).first()
-    if not study or study.status != 'active':
-        abort(404)
-    
-    session_id = session.get('study_session_id')
-    if not session_id:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    study_response = StudyResponse.objects(session_id=session_id).first()
-    if not study_response:
-        return redirect(url_for('study_participation.study_welcome', share_token=share_token))
-    
-    return render_template('study_participation/orientation.html', 
-                         study=study, study_response=study_response)
+
 
 @study_participation_bp.route('/<share_token>/task/<int:task_index>')
 def task_page(share_token, task_index):
@@ -235,13 +223,32 @@ def task_page(share_token, task_index):
 @study_participation_bp.route('/<share_token>/task/<int:task_index>/start', methods=['POST'])
 def start_task(share_token, task_index):
     """Start timing for a specific task."""
+    print(f"DEBUG: start_task called with share_token={share_token}, task_index={task_index}")
+    print(f"DEBUG: session contents: {dict(session)}")
+    print(f"DEBUG: request headers: {dict(request.headers)}")
+    print(f"DEBUG: request method: {request.method}")
+    print(f"DEBUG: request content type: {request.content_type}")
+    
+    try:
+        if request.is_json:
+            print(f"DEBUG: request JSON data: {request.get_json()}")
+        else:
+            print(f"DEBUG: request form data: {request.form}")
+            print(f"DEBUG: request data: {request.data}")
+    except Exception as e:
+        print(f"DEBUG: Error parsing request data: {e}")
+    
     session_id = session.get('study_session_id')
+    print(f"DEBUG: session_id from session: {session_id}")
+    
     if not session_id:
-        return jsonify({'error': 'No active session'}), 400
+        return jsonify({'error': 'No active session', 'debug': 'session_id is None'}), 400
     
     study_response = StudyResponse.objects(session_id=session_id).first()
+    print(f"DEBUG: study_response found: {study_response is not None}")
+    
     if not study_response:
-        return jsonify({'error': 'Study response not found'}), 400
+        return jsonify({'error': 'Study response not found', 'debug': f'No response for session_id: {session_id}'}), 400
     
     study = study_response.study
     

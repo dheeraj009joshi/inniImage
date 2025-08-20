@@ -31,11 +31,34 @@ class MindgenomeImageApp {
         const navMenu = document.querySelector('#nav-menu');
         
         if (navToggle && navMenu) {
-            navToggle.addEventListener('click', () => {
+            navToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Toggle mobile menu
                 navMenu.classList.toggle('is-open');
-                navToggle.setAttribute('aria-expanded', 
-                    navMenu.classList.contains('is-open').toString()
-                );
+                navToggle.classList.toggle('is-open');
+                
+                // Update ARIA attributes
+                const isExpanded = navMenu.classList.contains('is-open');
+                navToggle.setAttribute('aria-expanded', isExpanded.toString());
+                
+                // Close user dropdown if open
+                const userDropdown = document.querySelector('.user-dropdown');
+                if (userDropdown) {
+                    userDropdown.classList.remove('is-open');
+                }
+                
+                console.log('Mobile menu toggled:', isExpanded);
+            });
+            
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!navToggle.contains(e.target) && !navMenu.contains(e.target)) {
+                    navMenu.classList.remove('is-open');
+                    navToggle.classList.remove('is-open');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                }
             });
         }
 
@@ -45,15 +68,43 @@ class MindgenomeImageApp {
         
         if (userMenu && userDropdown) {
             userMenu.addEventListener('click', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
+                
+                // Close mobile menu if open
+                if (navMenu && navMenu.classList.contains('is-open')) {
+                    navMenu.classList.remove('is-open');
+                    navToggle.classList.remove('is-open');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                }
+                
+                // Toggle user dropdown
                 userDropdown.classList.toggle('is-open');
+                const isExpanded = userDropdown.classList.contains('is-open');
+                userMenu.setAttribute('aria-expanded', isExpanded.toString());
+                
+                console.log('User dropdown toggled:', isExpanded);
             });
 
-            // Close on outside click
-            document.addEventListener('click', () => {
-                userDropdown.classList.remove('is-open');
+            // Close user dropdown on outside click
+            document.addEventListener('click', (e) => {
+                if (!userMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('is-open');
+                    userMenu.setAttribute('aria-expanded', 'false');
+                }
             });
         }
+        
+        // Close mobile menu on window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                if (navMenu) navMenu.classList.remove('is-open');
+                if (navToggle) {
+                    navToggle.classList.remove('is-open');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                }
+            }
+        });
     }
 
     setupFlashMessages() {

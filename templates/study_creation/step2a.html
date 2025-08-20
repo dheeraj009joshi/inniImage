@@ -9,42 +9,7 @@
         <p class="step-description">Add the elements that respondents will evaluate in your study</p>
         
         <!-- Progress Bar -->
-        <div class="step-progress">
-            <ul class="step-progress-list">
-                <li class="step-progress-item step-progress-item--completed">
-                    <div class="step-progress-circle">1a</div>
-                    <span class="step-progress-label">Basic Details</span>
-                </li>
-                <li class="step-progress-item step-progress-item--completed">
-                    <div class="step-progress-circle">1b</div>
-                    <span class="step-progress-label">Study Type</span>
-                </li>
-                <li class="step-progress-item step-progress-item--completed">
-                    <div class="step-progress-circle">1c</div>
-                    <span class="step-progress-label">Rating Scale</span>
-                </li>
-                <li class="step-progress-item step-progress-item--active">
-                    <div class="step-progress-circle">2a</div>
-                    <span class="step-progress-label">Elements</span>
-                </li>
-                <li class="step-progress-item">
-                    <div class="step-progress-circle">2b</div>
-                    <span class="step-progress-label">Questions</span>
-                </li>
-                <li class="step-progress-item">
-                    <div class="step-progress-circle">2c</div>
-                    <span class="step-progress-label">IPED Parameters</span>
-                </li>
-                <li class="step-progress-item">
-                    <div class="step-progress-circle">3a</div>
-                    <span class="step-progress-label">Generate Tasks</span>
-                </li>
-                <li class="step-progress-item">
-                    <div class="step-progress-circle">3b</div>
-                    <span class="step-progress-label">Launch</span>
-                </li>
-            </ul>
-        </div>
+        {{ study_progress_bar('2a', draft.get_step_data('1b').get('study_type', 'grid') if draft.get_step_data('1b') else 'grid', draft) }}
     </div>
 
     <div class="step-content">
@@ -84,14 +49,8 @@
                                            value="{{ elements_data[i].name if elements_data and elements_data[i] else '' }}">
                                 </div>
                                 
-                                <div class="study-form-group">
-                                    <label class="study-form-label study-form-label--required">Element Type</label>
-                                    <select name="element_{{ i }}_type" class="study-form-control study-form-select" onchange="toggleElementContent({{ i }}, this.value)" required>
-                                        <option value="">Select type</option>
-                                        <option value="text" {% if (study_type == 'text') or (elements_data and elements_data[i] and elements_data[i].element_type == 'text') %}selected{% endif %}>Text</option>
-                                        <option value="image" {% if (study_type == 'image') or (elements_data and elements_data[i] and elements_data[i].element_type == 'image') %}selected{% endif %}>Image</option>
-                                    </select>
-                                </div>
+                                <!-- Element type is always image - no need for selection -->
+                                <input type="hidden" name="element_{{ i }}_type" value="image">
                             </div>
                             
                             <div class="study-form-group">
@@ -101,46 +60,48 @@
                             </div>
                             
                             <div class="element-content" id="elementContent{{ i }}">
-                                <!-- Content will be dynamically shown based on type -->
-                                {% if elements_data and elements_data[i] %}
-                                    {% if elements_data[i].element_type == 'text' %}
-                                        <div class="study-form-group">
-                                            <label class="study-form-label study-form-label--required">Text Content</label>
-                                            <textarea name="element_{{ i }}_content" class="study-form-control study-form-textarea" rows="3" 
-                                                      placeholder="Enter the text content for this element" required>{{ elements_data[i].content }}</textarea>
-                                        </div>
-                                    {% elif elements_data[i].element_type == 'image' %}
-                                        <div class="study-form-group">
-                                            <label class="study-form-label study-form-label--required">Image File</label>
-                                            <input type="file" name="element_{{ i }}_image" class="study-form-control" accept="image/*" 
-                                                   {% if not elements_data[i].content %}required{% endif %}>
-                                            <small class="form-help">
-                                                {% if elements_data[i].content %}
-                                                    Leave empty to keep current image, or upload a new one to replace it.
-                                                {% else %}
-                                                    Upload an image file (JPG, PNG, GIF, WebP). Max size: 16MB.
-                                                {% endif %}
-                                            </small>
-                                        </div>
-                                        <div class="study-form-group">
-                                            <label class="study-form-label">Alt Text</label>
-                                            <input type="text" name="element_{{ i }}_alt_text" class="study-form-control" 
-                                                   placeholder="Description for accessibility" 
-                                                   value="{{ elements_data[i].alt_text }}">
-                                        </div>
-                                        {% if elements_data[i].content %}
+                                <!-- All elements are always images -->
+                                <div class="study-form-group">
+                                    <label class="study-form-label study-form-label--required">Image File</label>
+                                    <input type="file" name="element_{{ i }}_image" class="study-form-control" accept="image/*" 
+                                           {% if not (elements_data and elements_data[i] and elements_data[i].content) %}required{% endif %}
+                                           onchange="previewImage(this, {{ i }})">
+                                    <small class="form-help">
+                                        {% if elements_data and elements_data[i] and elements_data[i].content %}
+                                            Leave empty to keep current image, or upload a new one to replace it.
+                                        {% else %}
+                                            Upload an image file (JPG, PNG, GIF, WebP). Max size: 16MB.
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                
+                                <!-- Image Preview Container -->
+                                <div class="image-preview-container" id="imagePreview{{ i }}" style="display: none;">
+                                    <label class="study-form-label">Image Preview:</label>
+                                    <div class="preview-image-wrapper">
+                                        <img id="previewImage{{ i }}" src="" alt="Preview" class="preview-image">
+                                        <button type="button" class="preview-remove-btn" onclick="removeImagePreview({{ i }})">Remove</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="study-form-group">
+                                    <label class="study-form-label">Alt Text</label>
+                                    <input type="text" name="element_{{ i }}_alt_text" class="study-form-control" 
+                                           placeholder="Description for accessibility" 
+                                           value="{{ elements_data[i].alt_text if elements_data and elements_data[i] else '' }}">
+                                </div>
+                                
+                                                                        {% if elements_data and elements_data[i] and elements_data[i].content %}
                                         <div class="image-preview">
                                             <label class="study-form-label">Current Image:</label>
                                             <img src="{{ elements_data[i].content }}" alt="{{ elements_data[i].alt_text or 'Element image' }}" 
-                                                 style="max-width: 150px; max-height: 150px; object-fit: contain; border-radius: 4px; border: 1px solid var(--color-neutral-200);">
+                                                 style="max-width: 80px; max-height: 80px; object-fit: contain; border-radius: 4px; border: 1px solid var(--color-neutral-200);">
                                             <input type="hidden" name="element_{{ i }}_current_image" value="{{ elements_data[i].content }}">
                                             <div class="current-image-info">
                                                 <small class="text-success">✓ Image already uploaded: {{ elements_data[i].content|truncate(50) }}</small>
                                             </div>
                                         </div>
                                         {% endif %}
-                                    {% endif %}
-                                {% endif %}
                             </div>
                         </div>
                         {% endfor %}
@@ -199,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function toggleElementContent(elementIndex, elementType) {
+// function toggleElementContent(elementIndex, elementType) {
     const contentDiv = document.getElementById(`elementContent${elementIndex}`);
     
     if (elementType === 'text') {
@@ -267,14 +228,8 @@ function addElement() {
                 <input type="text" name="element_${currentElementCount}_name" class="study-form-control" placeholder="e.g., Product Feature A" required>
             </div>
             
-            <div class="study-form-group">
-                <label class="study-form-label study-form-label--required">Element Type</label>
-                <select name="element_${currentElementCount}_type" class="study-form-control study-form-select" onchange="toggleElementContent(${currentElementCount}, this.value)" required>
-                    <option value="">Select type</option>
-                    <option value="text" ${studyType === 'text' ? 'selected' : ''}>Text</option>
-                    <option value="image" ${studyType === 'image' ? 'selected' : ''}>Image</option>
-                </select>
-            </div>
+            <!-- Element type is always image - hidden input -->
+            <input type="hidden" name="element_${currentElementCount}_type" value="image">
         </div>
         
         <div class="study-form-group">
@@ -283,22 +238,32 @@ function addElement() {
         </div>
         
         <div class="element-content" id="elementContent${currentElementCount}">
-            <!-- Content will be dynamically shown based on type -->
+            <!-- All elements are always images -->
+            <div class="study-form-group">
+                <label class="study-form-label study-form-label--required">Image File</label>
+                <input type="file" name="element_${currentElementCount}_image" class="study-form-control" accept="image/*" required onchange="previewImage(this, ${currentElementCount})">
+                <small class="form-help">Upload an image file (JPG, PNG, GIF, WebP). Max size: 16MB.</small>
+            </div>
+            
+            <!-- Image Preview Container -->
+            <div class="image-preview-container" id="imagePreview${currentElementCount}" style="display: none;">
+                <label class="study-form-label">Image Preview:</label>
+                <div class="preview-image-wrapper">
+                    <img id="previewImage${currentElementCount}" src="" alt="Preview" class="preview-image">
+                                                        <button type="button" class="preview-remove-btn" onclick="removeImagePreview(${currentElementCount})">Remove</button>
+                </div>
+            </div>
+            
+            <div class="study-form-group">
+                <label class="study-form-label">Alt Text</label>
+                <input type="text" name="element_${currentElementCount}_alt_text" class="study-form-control" placeholder="Description for accessibility">
+            </div>
         </div>
     `;
     
     container.appendChild(newElement);
     
-    // Automatically show the content fields for the selected type
-    if (studyType) {
-        toggleElementContent(currentElementCount, studyType);
-    } else {
-        // If no study type is set, default to the study type from the form
-        const defaultStudyType = '{{ study_type }}';
-        if (defaultStudyType) {
-            toggleElementContent(currentElementCount, defaultStudyType);
-        }
-    }
+    // No need to toggle content since all elements are always images
     
     currentElementCount++;
     
@@ -329,17 +294,18 @@ function removeElement(elementIndex) {
             
             // Update form field names
             const nameInput = el.querySelector('input[name^="element_"][name$="_name"]');
-            const typeSelect = el.querySelector('select[name^="element_"][name$="_type"]');
+            const typeHidden = el.querySelector('input[name^="element_"][name$="_type"]');
             const descTextarea = el.querySelector('textarea[name^="element_"][name$="_description"]');
             const contentDiv = el.querySelector('.element-content');
+            const imageInput = el.querySelector('input[name^="element_"][name$="_image"]');
+            const altTextInput = el.querySelector('input[name^="element_"][name$="_alt_text"]');
             
             if (nameInput) nameInput.name = `element_${index}_name`;
-            if (typeSelect) {
-                typeSelect.name = `element_${index}_type`;
-                typeSelect.setAttribute('onchange', `toggleElementContent(${index}, this.value)`);
-            }
+            if (typeHidden) typeHidden.name = `element_${index}_type`;
             if (descTextarea) descTextarea.name = `element_${index}_description`;
             if (contentDiv) contentDiv.id = `elementContent${index}`;
+            if (imageInput) imageInput.name = `element_${index}_image`;
+            if (altTextInput) altTextInput.name = `element_${index}_alt_text`;
         });
         currentElementCount = elements.length;
         
@@ -399,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <div class="image-preview">
                                     <label class="study-form-label">Current Image:</label>
-                                    <img src="${data.content}" alt="${data.alt_text || 'Element image'}" style="max-width: 150px; max-height: 150px; object-fit: contain; border-radius: 4px; border: 1px solid var(--color-neutral-200);">
+                                    <img src="${data.content}" alt="${data.alt_text || 'Element image'}" style="max-width: 80px; max-height: 80px; object-fit: contain; border-radius: 4px; border: 1px solid var(--color-neutral-200);">
                                     <input type="hidden" name="element_${index}_current_image" value="${data.content}">
                                     <div class="current-image-info">
                                         <small class="text-success">✓ Image already uploaded: ${data.content.length > 50 ? data.content.substring(0, 50) + '...' : data.content}</small>
@@ -424,5 +390,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Image preview functionality
+function previewImage(input, elementIndex) {
+    const previewContainer = document.getElementById(`imagePreview${elementIndex}`);
+    const previewImg = document.getElementById(`previewImage${elementIndex}`);
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        };
+        
+        reader.readAsDataURL(file);
+    } else {
+        previewContainer.style.display = 'none';
+    }
+}
+
+function removeImagePreview(elementIndex) {
+    const previewContainer = document.getElementById(`imagePreview${elementIndex}`);
+    const fileInput = document.querySelector(`input[name="element_${elementIndex}_image"]`);
+    const previewImg = document.getElementById(`previewImage${elementIndex}`);
+    
+    // Clear the file input
+    fileInput.value = '';
+    
+    // Hide the preview
+    previewContainer.style.display = 'none';
+    previewImg.src = '';
+}
 </script>
 {% endblock %}

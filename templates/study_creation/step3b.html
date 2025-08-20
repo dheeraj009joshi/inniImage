@@ -5,44 +5,23 @@
 {% block content %}
 <div class="study-creation-container">
     <!-- Progress Bar -->
-    <div class="step-progress">
-        <ul class="step-progress-list">
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1a</div>
-                <span class="step-progress-label">Basic Details</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1b</div>
-                <span class="step-progress-label">Study Type</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1c</div>
-                <span class="step-progress-label">Rating Scale</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">2a</div>
-                <span class="step-progress-label">Elements</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">2b</div>
-                <span class="step-progress-label">Questions</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">2c</div>
-                <span class="step-progress-label">IPED Parameters</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">3a</div>
-                <span class="step-progress-label">Generate Tasks</span>
-            </li>
-            <li class="step-progress-item step-progress-item--active">
-                <div class="step-progress-circle">3b</div>
-                <span class="step-progress-label">Launch</span>
-            </li>
-        </ul>
-    </div>
+            {{ study_progress_bar('3b', draft.get_step_data('1b').get('study_type', 'grid') if draft.get_step_data('1b') else 'grid', draft) }}
 
     <div class="step-content">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
         <div class="step-header">
             <h1 class="step-title">Step 3b: Study Preview & Launch</h1>
             <p class="step-description">Review your study and launch it</p>
@@ -118,32 +97,68 @@
                     
                     <!-- Study Elements -->
                     <div class="preview-section">
-                        <h4>Study Elements ({{ study_data.step2a.elements|length }})</h4>
+                        <h4>Study Elements ({{ study_data.step2a.elements|length if study_data.step2a and study_data.step2a.elements else 0 }})</h4>
+                        
+                        <!-- Debug Information -->
+                        {% if study_data.step2a %}
+                            <div class="debug-info" style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                                <strong>DEBUG:</strong> Step2a data available<br>
+                                <strong>Elements count:</strong> {{ study_data.step2a.elements|length if study_data.step2a.elements else 0 }}<br>
+                                <strong>Raw data:</strong> {{ study_data.step2a|tojson }}
+                            </div>
+                        {% else %}
+                            <div class="debug-info" style="background: #ffebee; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                                <strong>DEBUG:</strong> No Step2a data found
+                            </div>
+                        {% endif %}
+                        
                         <div class="elements-preview">
-                            {% for element in study_data.step2a.elements %}
-                            <div class="element-preview">
-                                <div class="element-header">
-                                    <h5>{{ element.name }}</h5>
-                                    <span class="element-type">{{ element.element_type }}</span>
-                                </div>
-                                {% if element.description %}
-                                <p class="element-description">{{ element.description }}</p>
-                                {% endif %}
-                                {% if element.element_type == 'text' %}
-                                <div class="element-content">
-                                    <strong>Text:</strong> {{ element.content }}
-                                </div>
-                                {% elif element.element_type == 'image' %}
-                                <div class="element-content">
-                                    <strong>Image:</strong> 
-                                    <img src="{{ element.content }}" alt="{{ element.alt_text or 'Study element' }}" style="max-width: 200px; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 0.5rem;">
-                                    {% if element.alt_text %}
-                                    <br><small>Alt: {{ element.alt_text }}</small>
+                            {% if study_data.step2a and study_data.step2a.elements %}
+                                {% for element in study_data.step2a.elements %}
+                                <div class="element-preview">
+                                    <div class="element-header">
+                                        <h5>{{ element.name or 'Unnamed Element' }}</h5>
+                                        <span class="element-type">{{ element.element_type or 'unknown' }}</span>
+                                    </div>
+                                    {% if element.description %}
+                                    <p class="element-description">{{ element.description }}</p>
+                                    {% endif %}
+                                    {% if element.element_type == 'text' %}
+                                    <div class="element-content">
+                                        <strong>Text:</strong> {{ element.content or 'No text content' }}
+                                    </div>
+                                    {% elif element.element_type == 'image' %}
+                                    <div class="element-content">
+                                        <strong>Image:</strong> 
+                                        {% if element.content %}
+                                            <div class="image-container">
+                                                <img src="{{ element.content }}" 
+                                                     alt="{{ element.alt_text or 'Study element' }}" 
+                                                     class="element-image"
+                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                <div class="image-error" style="display: none; color: #d32f2f; font-style: italic;">
+                                                    Failed to load image: {{ element.content }}
+                                                </div>
+                                            </div>
+                                            {% if element.alt_text %}
+                                            <br><small class="alt-text">Alt: {{ element.alt_text }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="no-image">No image content available</div>
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <div class="element-content">
+                                        <strong>Content:</strong> {{ element.content or 'No content' }}
+                                    </div>
                                     {% endif %}
                                 </div>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="no-elements">
+                                    <p>No study elements found. Please complete step 2a first.</p>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     
@@ -155,12 +170,12 @@
                             {% for question in study_data.step2b.questions %}
                             <div class="question-preview">
                                 <h5>{{ question.question_text }}</h5>
-                                <div class="question-details">
-                                    <span class="question-type">{{ question.question_type }}</span>
-                                    {% if question.is_required %}
+                                                            <div class="question-details">
+                                <span class="question-type">Single Choice</span>
+                                {% if question.is_required %}
                                     <span class="required-badge">Required</span>
-                                    {% endif %}
-                                </div>
+                                {% endif %}
+                            </div>
                                 {% if question.answer_options %}
                                 <div class="answer-options">
                                     <strong>Options:</strong>

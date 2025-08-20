@@ -5,145 +5,199 @@
 {% block content %}
 <div class="classification-container">
     <div class="classification-header">
-        <h1 class="classification-title">Classification Questions</h1>
-        <p class="classification-subtitle">Please answer a few questions to help us understand your background</p>
+        <h1 class="personal-info-title">Classification Questions</h1>
+        <p class="personal-info-subtitle">Please answer a few questions to help us understand your background</p>
     </div>
 
-    <form method="POST" action="{{ url_for('study_participation.submit_classification', share_token=study.share_token) }}" class="classification-form">
+    <form class="classification-form">
+        <!-- CSRF token for form submission -->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
-        {% for question in study.classification_questions %}
-            <div class="question-section">
-                <h3 class="question-title">{{ question.question_text }}</h3>
-                
-                {% if question.question_type == 'multiple_choice' %}
-                    <div class="question-options">
-                        {% for option in question.options %}
-                            <div class="option-item" onclick="selectOption(this, '{{ question.id }}', '{{ option }}')">
-                                <input type="radio" 
-                                       name="classification_{{ question.id }}" 
-                                       value="{{ option }}"
-                                       class="option-radio">
-                                <label class="option-label">{{ option }}</label>
+        <!-- Dynamic Classification Questions from Study Model -->
+        {% if study.classification_questions %}
+            {% for question in study.classification_questions %}
+                <div class="question-section">
+                    <h3 class="question-title">{{ question.question_text }}</h3>
+                    <div class="question-options-grid">
+                        {% for option in question.answer_options %}
+                            <div class="option-grid-item" onclick="selectOption(this, '{{ question.question_id }}', '{{ option }}')" data-question-id="{{ question.question_id }}" data-option-value="{{ option }}">
+                                <span class="option-label">{{ option }}</span>
                             </div>
                         {% endfor %}
                     </div>
-                {% elif question.question_type == 'text' %}
-                    <input type="text" 
-                           name="classification_{{ question.id }}" 
-                           class="study-form-control"
-                           placeholder="Enter your answer">
-                {% elif question.question_type == 'number' %}
-                    <input type="number" 
-                           name="classification_{{ question.id }}" 
-                           class="study-form-control"
-                           placeholder="Enter a number">
-                {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <!-- Fallback: Default classification questions if none are set -->
+            <div class="question-section">
+                <h3 class="question-title">Do you like this deo?</h3>
+                <div class="question-options-grid">
+                    <div class="option-grid-item" onclick="selectOption(this, 'deo_like', 'Love it')" data-question-id="deo_like" data-option-value="Love it">
+                        <span class="option-label">Love it</span>
+                    </div>
+                    <div class="option-grid-item" onclick="selectOption(this, 'deo_like', 'Like it')" data-question-id="deo_like" data-option-value="Like it">
+                        <span class="option-label">Like it</span>
+                    </div>
+                    <div class="option-grid-item" onclick="selectOption(this, 'deo_like', 'It\'s okay')" data-question-id="deo_like" data-option-value="It's okay">
+                        <span class="option-label">It's okay</span>
+                    </div>
+                    <div class="option-grid-item" onclick="selectOption(this, 'deo_like', 'Don\'t like it')" data-question-id="deo_like" data-option-value="Don't like it">
+                        <span class="option-label">Don't like it</span>
+                    </div>
+                    <div class="option-grid-item" onclick="selectOption(this, 'deo_like', 'Hate it')" data-question-id="deo_like" data-option-value="Hate it">
+                        <span class="option-label">Hate it</span>
+                    </div>
+                </div>
             </div>
-        {% endfor %}
+
+            <div class="question-section">
+                <h3 class="question-title">Do you like this hair?</h3>
+                <div class="question-options-grid">
+                    <div class="option-grid-item" onclick="selectOption(this, 'hair_like', 'Absolutely love it')" data-question-id="hair_like" data-option-value="Absolutely love it">
+                        <span class="option-label">Absolutely love it</span>
+                    </div>
+                    <div class="option-grid-item" onclick="selectOption(this, 'hair_like', 'Really like it')" data-question-id="hair_like" data-option-value="Really like it">
+                        <span class="option-label">Really like it</span>
+                    </div>
+                    <div class="option-grid-item" onclick="selectOption(this, 'hair_like', 'It\'s fine')" data-question-id="hair_like" data-option-value="It's fine">
+                        <span class="option-label">It's fine</span>
+                    </div>
+                    <div class="option-grid-item" onclick="selectOption(this, 'hair_like', 'Not my style')" data-question-id="hair_like" data-option-value="Not my style">
+                        <span class="option-label">Not my style</span>
+                    </div>
+                    <div class="option-grid-item" onclick="selectOption(this, 'hair_like', 'Really dislike it')" data-question-id="hair_like" data-option-value="Really dislike it">
+                        <span class="option-label">Really dislike it</span>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
 
         <div class="classification-actions">
+            <a href="{{ url_for('study_participation.personal_info', share_token=study.share_token) }}" class="btn btn--secondary">
+                <span class="btn-icon">⬅️</span>
+                Previous
+            </a>
             <button type="submit" class="btn btn--primary btn-large">
                 <span class="btn-icon">➡️</span>
-                Start Rating Tasks
+                Next
             </button>
         </div>
     </form>
 </div>
 
 <script>
-function selectOption(optionItem, questionId, optionValue) {
+function selectOption(optionItem, questionName, optionValue) {
     // Remove selected class from all options in this question
     const questionSection = optionItem.closest('.question-section');
-    questionSection.querySelectorAll('.option-item').forEach(item => {
+    questionSection.querySelectorAll('.option-grid-item').forEach(item => {
         item.classList.remove('selected');
+        item.removeAttribute('data-selected');
     });
     
     // Add selected class to clicked option
     optionItem.classList.add('selected');
     
-    // Check the radio button
-    const radio = optionItem.querySelector('input[type="radio']');
-    radio.checked = true;
+    // Store the selection in the option item for form submission
+    optionItem.setAttribute('data-selected', 'true');
 }
 
 // Handle form submission
-document.querySelector('.classification-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.classification-form');
+    if (!form) {
+        console.error('Classification form not found');
+        return;
+    }
     
-    const form = this;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+    
+    // Check if all required questions are answered
+    const requiredQuestions = [];
+    {% if study.classification_questions %}
+        {% for question in study.classification_questions %}
+            requiredQuestions.push('{{ question.question_id }}');
+        {% endfor %}
+    {% else %}
+        requiredQuestions.push('deo_like', 'hair_like');
+    {% endif %}
+    
+    console.log('Required questions:', requiredQuestions);
+    
+    const answeredQuestions = [];
+    
+    requiredQuestions.forEach(questionName => {
+        const selectedOption = form.querySelector(`[data-question-id="${questionName}"][data-selected="true"]`);
+        console.log(`Checking question ${questionName}:`, selectedOption);
+        if (selectedOption) {
+            answeredQuestions.push(questionName);
+        }
+    });
+    
+    console.log('Answered questions:', answeredQuestions);
+    
+    if (answeredQuestions.length < requiredQuestions.length) {
+        alert(`Please answer all questions before continuing. You answered ${answeredQuestions.length} out of ${requiredQuestions.length} questions.`);
+        return;
+    }
     
     // Show loading state
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="btn-icon">⏳</span> Submitting...';
     
     try {
-        // Collect all answers
+        // Collect all answers from selected options
         const answers = [];
-        const radioButtons = form.querySelectorAll('input[type="radio"]:checked');
-        const textInputs = form.querySelectorAll('input[type="text"]');
-        const numberInputs = form.querySelectorAll('input[type="number"]');
+        const selectedOptions = form.querySelectorAll('[data-selected="true"]');
         
-        // Process radio button answers
-        radioButtons.forEach(radio => {
-            const questionId = radio.name.replace('classification_', '');
-            const questionText = radio.closest('.question-section').querySelector('.question-title').textContent;
+        // Process selected options
+        selectedOptions.forEach(option => {
+            const questionId = option.getAttribute('data-question-id');
+            const questionText = option.closest('.question-section').querySelector('.question-title').textContent;
+            const optionValue = option.getAttribute('data-option-value');
             answers.push({
                 question_id: questionId,
                 question_text: questionText,
-                question_type: 'multiple_choice',
-                answer: radio.value,
+                answer: optionValue,
                 time_spent: 0.0
             });
         });
         
-        // Process text input answers
-        textInputs.forEach(input => {
-            if (input.value.trim()) {
-                const questionId = input.name.replace('classification_', '');
-                const questionText = input.closest('.question-section').querySelector('.question-title').textContent;
-                answers.push({
-                    question_id: questionId,
-                    question_text: questionText,
-                    question_type: 'text',
-                    answer: input.value.trim(),
-                    time_spent: 0.0
-                });
-            }
-        });
-        
-        // Process number input answers
-        numberInputs.forEach(input => {
-            if (input.value.trim()) {
-                const questionId = input.name.replace('classification_', '');
-                const questionText = input.closest('.question-section').querySelector('.question-title').textContent;
-                answers.push({
-                    question_id: questionId,
-                    question_text: questionText,
-                    question_type: 'number',
-                    answer: input.value.trim(),
-                    time_spent: 0.0
-                });
-            }
-        });
+        console.log('Submitting answers:', answers);
         
         // Submit answers
-        const response = await fetch(form.action, {
+        const requestBody = { answers: answers };
+        console.log('Request body:', requestBody);
+        console.log('Request URL:', "{{ url_for('study_participation.submit_classification', share_token=study.share_token) }}");
+        
+        const response = await fetch("{{ url_for('study_participation.submit_classification', share_token=study.share_token) }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token() }}'
             },
-            body: JSON.stringify({ answers: answers })
+            body: JSON.stringify(requestBody)
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
+        console.log('Response:', data);
         
         if (data.success) {
             // Redirect to first task
-            window.location.href = data.redirect_url;
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                // Fallback redirect
+                window.location.href = "{{ url_for('study_participation.study_welcome', share_token=study.share_token) }}";
+            }
         } else {
             throw new Error(data.error || 'Failed to submit answers');
         }

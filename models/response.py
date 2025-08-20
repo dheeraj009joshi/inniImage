@@ -28,7 +28,7 @@ class ClassificationAnswer(EmbeddedDocument):
     """Embedded document for classification question answers."""
     question_id = StringField(required=True, max_length=10)
     question_text = StringField(required=True, max_length=500)
-    question_type = StringField(required=True, choices=['single_choice', 'multiple_choice', 'text_input'])
+    # question_type removed - all classification questions are single choice
     answer = StringField(required=True, max_length=1000)
     answer_timestamp = DateTimeField(required=True)
     time_spent_seconds = FloatField(default=0.0)
@@ -59,6 +59,7 @@ class StudyResponse(Document):
     
     # Classification and Demographics
     classification_answers = ListField(EmbeddedDocumentField(ClassificationAnswer))
+    personal_info = DictField()  # Age, gender, education, etc.
     
     # Analytics Data
     ip_address = StringField(max_length=45)  # IPv6 support

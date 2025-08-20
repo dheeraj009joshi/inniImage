@@ -67,7 +67,7 @@
                                 {% if question.is_required %}<span class="required">*</span>{% endif %}
                             </label>
                             
-                            {% if question.question_type == 'single_choice' %}
+                            <!-- All classification questions are single choice -->
                             <div class="form-group">
                                 {% for option in question.answer_options %}
                                 <div class="form-check">
@@ -76,22 +76,8 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                            {% elif question.question_type == 'multiple_choice' %}
-                            <div class="form-group">
-                                {% for option in question.answer_options %}
-                                <div class="form-check">
-                                    <input type="checkbox" name="q{{ question.question_id }}" value="{{ option }}" class="form-check-input">
-                                    <label class="form-check-label">{{ option }}</label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            {% elif question.question_type == 'text' %}
-                            <input type="text" class="form-control" placeholder="Enter your answer">
-                            {% elif question.question_type == 'number' %}
-                            <input type="number" class="form-control" placeholder="Enter a number">
-                            {% elif question.question_type == 'date' %}
-                            <input type="date" class="form-control">
-                            {% endif %}
+
+
                         </div>
                         {% endfor %}
                         {% else %}

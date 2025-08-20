@@ -5,42 +5,7 @@
 {% block content %}
 <div class="study-creation-container">
     <!-- Progress Bar -->
-    <div class="step-progress">
-        <ul class="step-progress-list">
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1a</div>
-                <span class="step-progress-label">Basic Details</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1b</div>
-                <span class="step-progress-label">Study Type</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1c</div>
-                <span class="step-progress-label">Rating Scale</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">2a</div>
-                <span class="step-progress-label">Elements</span>
-            </li>
-            <li class="step-progress-item step-progress-item--active">
-                <div class="step-progress-circle">2b</div>
-                <span class="step-progress-label">Questions</span>
-            </li>
-            <li class="step-progress-item">
-                <div class="step-progress-circle">2c</div>
-                <span class="step-progress-label">IPED Parameters</span>
-            </li>
-            <li class="step-progress-item">
-                <div class="step-progress-circle">3a</div>
-                <span class="step-progress-label">Generate Tasks</span>
-            </li>
-            <li class="step-progress-item">
-                <div class="step-progress-circle">3b</div>
-                <span class="step-progress-label">Launch</span>
-            </li>
-        </ul>
-    </div>
+            {{ study_progress_bar('2b', draft.get_step_data('1b').get('study_type', 'grid') if draft.get_step_data('1b') else 'grid', draft) }}
 
     <div class="step-content">
         <div class="step-header">
@@ -80,33 +45,43 @@
                                    value="{{ questions_data[i].question_text if questions_data and questions_data[i] else '' }}">
                         </div>
                         
-                        <div class="study-form-row">
-                            <div class="study-form-group">
-                                <label class="study-form-label study-form-label--required">Question Type</label>
-                                <select name="question_{{ i }}_type" class="study-form-control study-form-select" onchange="toggleAnswerOptions({{ i }}, this.value)" required>
-                                    <option value="">Select type</option>
-                                    <option value="single_choice" {% if questions_data and questions_data[i] and questions_data[i].question_type == 'single_choice' %}selected{% endif %}>Single Choice</option>
-                                    <option value="multiple_choice" {% if questions_data and questions_data[i] and questions_data[i].question_type == 'multiple_choice' %}selected{% endif %}>Multiple Choice</option>
-                                    <option value="text" {% if questions_data and questions_data[i] and questions_data[i].question_type == 'text' %}selected{% endif %}>Text Input</option>
-                                    <option value="number" {% if questions_data and questions_data[i] and questions_data[i].question_type == 'number' %}selected{% endif %}>Number Input</option>
-                                    <option value="date" {% if questions_data and questions_data[i] and questions_data[i].question_type == 'date' %}selected{% endif %}>Date</option>
-                                </select>
-                            </div>
-                            
-                            <div class="study-form-group">
-                                <label class="study-form-label">Required</label>
-                                <div class="form-checkbox">
-                                    <input type="checkbox" name="question_{{ i }}_required" id="required_{{ i }}" 
-                                           {% if questions_data and questions_data[i] and questions_data[i].is_required %}checked{% else %}checked{% endif %}>
-                                    <label for="required_{{ i }}">This question is required</label>
-                                </div>
+                        <div class="study-form-group">
+                            <label class="study-form-label">Required</label>
+                            <div class="form-checkbox">
+                                <input type="checkbox" name="question_{{ i }}_required" id="required_{{ i }}" 
+                                       {% if questions_data and questions_data[i] and questions_data[i].is_required %}checked{% else %}checked{% endif %}>
+                                <label for="required_{{ i }}">This question is required</label>
                             </div>
                         </div>
                         
-                        <div class="answer-options" id="answerOptions{{ i }}" style="display: {% if questions_data and questions_data[i] and questions_data[i].question_type in ['single_choice', 'multiple_choice'] %}block{% else %}none{% endif %};">
-                            <label class="study-form-label">Answer Options</label>
-                            <textarea name="question_{{ i }}_options" class="study-form-control study-form-textarea" rows="3" placeholder="Enter each option on a new line&#10;e.g.,&#10;18-24 years&#10;25-34 years&#10;35-44 years&#10;45+ years">{{ questions_data[i].answer_options|join('\n') if questions_data and questions_data[i] and questions_data[i].answer_options else '' }}</textarea>
-                            <small class="form-help">Enter each option on a separate line</small>
+                        <div class="answer-options" id="answerOptions{{ i }}">
+                            <label class="study-form-label study-form-label--required">Answer Options</label>
+                            <div class="options-container" id="optionsContainer{{ i }}">
+                                {% if questions_data and questions_data[i] and questions_data[i].answer_options %}
+                                    {% for j in range(questions_data[i].answer_options|length) %}
+                                    <div class="option-row" data-option-index="{{ j }}">
+                                        <input type="text" name="question_{{ i }}_option_{{ j }}" class="study-form-control option-input" 
+                                               placeholder="Option {{ j + 1 }}" required 
+                                               value="{{ questions_data[i].answer_options[j] }}">
+                                        <button type="button" class="btn btn--danger btn--sm" onclick="removeOption({{ i }}, {{ j }})" 
+                                                {% if questions_data[i].answer_options|length <= 2 %}disabled{% endif %}>Remove</button>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="option-row" data-option-index="0">
+                                        <input type="text" name="question_{{ i }}_option_0" class="study-form-control option-input" 
+                                               placeholder="Option 1" required>
+                                        <button type="button" class="btn btn--danger btn--sm" onclick="removeOption({{ i }}, 0)" disabled>Remove</button>
+                                    </div>
+                                    <div class="option-row" data-option-index="1">
+                                        <input type="text" name="question_{{ i }}_option_1" class="study-form-control option-input" 
+                                               placeholder="Option 2" required>
+                                        <button type="button" class="btn btn--danger btn--sm" onclick="removeOption({{ i }}, 1)" disabled>Remove</button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <button type="button" class="btn btn--outline btn--sm" onclick="addOption({{ i }})">➕ Add Option</button>
+                            <small class="form-help">Add at least 2 options for single choice questions</small>
                         </div>
                         </div>
                         {% endfor %}
@@ -129,15 +104,50 @@
 <script>
 let currentQuestionCount = {{ num_questions }};
 
-function toggleAnswerOptions(questionIndex, questionType) {
-    const optionsDiv = document.getElementById(`answerOptions${questionIndex}`);
+function addOption(questionIndex) {
+    const optionsContainer = document.getElementById(`optionsContainer${questionIndex}`);
+    const optionCount = optionsContainer.querySelectorAll('.option-row').length;
+    const newOption = document.createElement('div');
+    newOption.className = 'option-row';
+    newOption.setAttribute('data-option-index', optionCount);
     
-    if (questionType === 'single_choice' || questionType === 'multiple_choice') {
-        optionsDiv.style.display = 'block';
-        optionsDiv.querySelector('textarea').required = true;
-    } else {
-        optionsDiv.style.display = 'none';
-        optionsDiv.querySelector('textarea').required = false;
+    newOption.innerHTML = `
+        <input type="text" name="question_${questionIndex}_option_${optionCount}" class="study-form-control option-input" 
+               placeholder="Option ${optionCount + 1}" required>
+        <button type="button" class="btn btn--danger btn--sm" onclick="removeOption(${questionIndex}, ${optionCount})">Remove</button>
+    `;
+    
+    optionsContainer.appendChild(newOption);
+    
+    // Enable remove buttons if we have more than 2 options
+    if (optionCount + 1 > 2) {
+        optionsContainer.querySelectorAll('.btn--danger').forEach(btn => btn.disabled = false);
+    }
+}
+
+function removeOption(questionIndex, optionIndex) {
+    const optionsContainer = document.getElementById(`optionsContainer${questionIndex}`);
+    const optionToRemove = optionsContainer.querySelector(`[data-option-index="${optionIndex}"]`);
+    
+    if (optionToRemove) {
+        optionToRemove.remove();
+        
+        // Renumber remaining options
+        const options = optionsContainer.querySelectorAll('.option-row');
+        options.forEach((option, index) => {
+            option.setAttribute('data-option-index', index);
+            const input = option.querySelector('input');
+            input.name = `question_${questionIndex}_option_${index}`;
+            input.placeholder = `Option ${index + 1}`;
+            
+            const removeBtn = option.querySelector('.btn--danger');
+            removeBtn.setAttribute('onclick', `removeOption(${questionIndex}, ${index})`);
+        });
+        
+        // Disable remove buttons if we have 2 or fewer options
+        if (options.length <= 2) {
+            optionsContainer.querySelectorAll('.btn--danger').forEach(btn => btn.disabled = true);
+        }
     }
 }
 
@@ -161,32 +171,28 @@ function addQuestion() {
             <input type="text" name="question_${currentQuestionCount}_text" class="study-form-control" placeholder="e.g., What is your age group?" required>
         </div>
         
-        <div class="study-form-row">
-            <div class="study-form-group">
-                <label class="study-form-label study-form-label--required">Question Type</label>
-                <select name="question_${currentQuestionCount}_type" class="study-form-control study-form-select" onchange="toggleAnswerOptions(${currentQuestionCount}, this.value)" required>
-                    <option value="">Select type</option>
-                    <option value="single_choice">Single Choice</option>
-                    <option value="multiple_choice">Multiple Choice</option>
-                    <option value="text">Text Input</option>
-                    <option value="number">Number Input</option>
-                    <option value="date">Date</option>
-                </select>
-            </div>
-            
-            <div class="study-form-group">
-                <label class="study-form-label">Required</label>
-                <div class="form-checkbox">
-                    <input type="checkbox" name="question_${currentQuestionCount}_required" id="required_${currentQuestionCount}" checked>
-                    <label for="required_${currentQuestionCount}">This question is required</label>
-                </div>
+        <div class="study-form-group">
+            <label class="study-form-label">Required</label>
+            <div class="form-checkbox">
+                <input type="checkbox" name="question_${currentQuestionCount}_required" id="required_${currentQuestionCount}" checked>
+                <label for="required_${currentQuestionCount}">This question is required</label>
             </div>
         </div>
         
-        <div class="answer-options" id="answerOptions${currentQuestionCount}" style="display: none;">
-            <label class="study-form-label">Answer Options</label>
-            <textarea name="question_${currentQuestionCount}_options" class="study-form-control study-form-textarea" rows="3" placeholder="Enter each option on a new line&#10;e.g.,&#10;18-24 years&#10;25-34 years&#10;35-44 years&#10;45+ years"></textarea>
-            <small class="form-help">Enter each option on a separate line</small>
+        <div class="answer-options" id="answerOptions${currentQuestionCount}">
+            <label class="study-form-label study-form-label--required">Answer Options</label>
+            <div class="options-container" id="optionsContainer${currentQuestionCount}">
+                <div class="option-row" data-option-index="0">
+                    <input type="text" name="question_${currentQuestionCount}_option_0" class="study-form-control option-input" placeholder="Option 1" required>
+                    <button type="button" class="btn btn--danger btn--sm" onclick="removeOption(${currentQuestionCount}, 0)" disabled>Remove</button>
+                </div>
+                <div class="option-row" data-option-index="1">
+                    <input type="text" name="question_${currentQuestionCount}_option_1" class="study-form-control option-input" placeholder="Option 2" required>
+                    <button type="button" class="btn btn--danger btn--sm" onclick="removeOption(${currentQuestionCount}, 1)" disabled>Remove</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn--outline btn--sm" onclick="addOption(${currentQuestionCount})">➕ Add Option</button>
+            <small class="form-help">Add at least 2 options for single choice questions</small>
         </div>
     `;
     
@@ -214,23 +220,36 @@ function removeQuestion(questionIndex) {
             
             // Update form field names
             const textInput = q.querySelector('input[name^="question_"][name$="_text"]');
-            const typeSelect = q.querySelector('select[name^="question_"][name$="_type"]');
             const requiredCheckbox = q.querySelector('input[name^="question_"][name$="_required"]');
-            const optionsTextarea = q.querySelector('textarea[name^="question_"][name$="_options"]');
-            const optionsDiv = q.querySelector('.answer-options');
             
             if (textInput) textInput.name = `question_${index}_text`;
-            if (typeSelect) {
-                typeSelect.name = `question_${index}_type`;
-                typeSelect.setAttribute('onchange', `toggleAnswerOptions(${index}, this.value)`);
-            }
             if (requiredCheckbox) {
                 requiredCheckbox.name = `question_${index}_required`;
                 requiredCheckbox.id = `required_${index}`;
                 q.querySelector(`label[for^="required_"]`).setAttribute('for', `required_${index}`);
             }
-            if (optionsTextarea) optionsTextarea.name = `question_${index}_options`;
-            if (optionsDiv) optionsDiv.id = `answerOptions${index}`;
+            
+            // Update options container ID and option names
+            const optionsContainer = q.querySelector('.options-container');
+            if (optionsContainer) {
+                optionsContainer.id = `optionsContainer${index}`;
+                const options = optionsContainer.querySelectorAll('.option-row');
+                options.forEach((option, optIndex) => {
+                    option.setAttribute('data-option-index', optIndex);
+                    const input = option.querySelector('input');
+                    input.name = `question_${index}_option_${optIndex}`;
+                    input.placeholder = `Option ${optIndex + 1}`;
+                    
+                    const removeBtn = option.querySelector('.btn--danger');
+                    removeBtn.setAttribute('onclick', `removeOption(${index}, ${optIndex})`);
+                });
+            }
+            
+            // Update add option button
+            const addOptionBtn = q.querySelector('.btn--outline');
+            if (addOptionBtn) {
+                addOptionBtn.setAttribute('onclick', `addOption(${index})`);
+            }
         });
         currentQuestionCount = questions.length;
         
@@ -261,9 +280,15 @@ function updateQuestions() {
 document.addEventListener('DOMContentLoaded', function() {
     const questions = document.querySelectorAll('.question-item');
     questions.forEach((question, index) => {
-        const typeSelect = question.querySelector('select[name^="question_"][name$="_type"]');
-        if (typeSelect && typeSelect.value) {
-            toggleAnswerOptions(index, typeSelect.value);
+        const optionsContainer = question.querySelector('.options-container');
+        if (optionsContainer) {
+            const options = optionsContainer.querySelectorAll('.option-row');
+            if (options.length <= 2) {
+                options.forEach(option => {
+                    const removeBtn = option.querySelector('.btn--danger');
+                    if (removeBtn) removeBtn.disabled = true;
+                });
+            }
         }
     });
 });

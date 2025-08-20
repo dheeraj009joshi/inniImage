@@ -32,8 +32,8 @@ class Step1aBasicDetailsForm(FlaskForm):
 class Step1bStudyTypeForm(FlaskForm):
     """Step 1b: Study Type & Main Question Form."""
     study_type = SelectField('Study Type', choices=[
-        ('image', 'Image-based Study'),
-        ('text', 'Text-based Study')
+        ('grid', 'Grid Study - Image/Text Elements'),
+        ('layer', 'Layer Study - Categorized Elements (A, B, C, D)')
     ], validators=[DataRequired(message='Study type selection is required')])
     main_question = TextAreaField('Main Research Question', validators=[
         DataRequired(message='Main research question is required'),
@@ -116,3 +116,11 @@ class Step3bLaunchForm(FlaskForm):
     """Step 3b: Study Preview & Launch Form."""
     launch_study = BooleanField('I am ready to launch this study')
     submit = SubmitField('Launch Study')
+
+class LayerStudyCategoryForm(FlaskForm):
+    """Form for configuring layer study categories."""
+    num_categories = IntegerField('Number of Categories', validators=[
+        DataRequired(message='Number of categories is required'),
+        NumberRange(min=2, max=10, message='Number of categories must be between 2 and 10')
+    ])
+    submit = SubmitField('Continue to Category Setup')

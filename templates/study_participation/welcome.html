@@ -63,15 +63,16 @@ document.getElementById('startStudyBtn').addEventListener('click', async functio
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token() }}'
             }
         });
         
         const data = await response.json();
         
         if (data.success) {
-            // Redirect to personal info page
-            window.location.href = "{{ url_for('study_participation.personal_info', share_token=study.share_token) }}";
+            // Redirect to the URL provided by the server
+            window.location.href = data.redirect_url;
         } else {
             alert('Error starting study: ' + data.error);
             button.disabled = false;

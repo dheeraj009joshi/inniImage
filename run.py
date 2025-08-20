@@ -16,13 +16,13 @@ def main():
     app = create_app()
     
     # Create database tables/indexes
-    with app.app_context():
-        try:
-            create_tables()
-            print("✅ Database setup completed")
-        except Exception as e:
-            print(f"⚠️  Database setup warning: {e}")
-            print("   Continuing with startup...")
+    # with app.app_context():
+    #     try:
+    #         create_tables()
+    #         print("✅ Database setup completed")
+    #     except Exception as e:
+    #         print(f"⚠️  Database setup warning: {e}")
+    #         print("   Continuing with startup...")
     
     # Run the application
     print("🌐 Starting Flask development server...")

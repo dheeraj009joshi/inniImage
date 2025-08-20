@@ -21,9 +21,9 @@
     <!-- Task Content -->
     <div class="task-content">
         <h1 class="task-title">{{ study.main_question }}</h1>
-        <p class="task-instruction">Please rate the following elements on the scale below:</p>
+        <p class="task-instruction">Please rate this task on the scale below:</p>
 
-        <!-- Study Elements -->
+        <!-- Study Elements Display (Images or Text) -->
         <div class="elements-grid">
             {% for element in visible_elements %}
                 <div class="element-card" data-element-id="{{ element.element_id }}">
@@ -39,31 +39,48 @@
                     
                     <div class="element-content">
                         {% if element.element_type == 'image' %}
-                            <img src="{{ url_for('static', filename='uploads/' + element.content) }}" 
-                                 alt="{{ element.alt_text or element.name }}"
-                                 class="element-image">
+                            {% if element.content.startswith('http') %}
+                                <!-- Azure Blob Storage URL -->
+                                <img src="{{ element.content }}" 
+                                     alt="{{ element.alt_text or element.name }}"
+                                     class="element-image"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div class="element-fallback" style="display: none;">
+                                    <div class="element-text">{{ element.name }}</div>
+                                </div>
+                            {% else %}
+                                <!-- Local file path -->
+                                <img src="{{ url_for('static', filename='uploads/' + element.content) }}" 
+                                     alt="{{ element.alt_text or element.name }}"
+                                     class="element-image"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div class="element-fallback" style="display: none;">
+                                    <div class="element-text">{{ element.name }}</div>
+                                </div>
+                            {% endif %}
                         {% else %}
                             <div class="element-text">{{ element.content }}</div>
                         {% endif %}
                     </div>
-                    
-                    <div class="rating-section">
-                        <label class="rating-label">Rate this element:</label>
-                        <div class="rating-scale">
-                            {% for i in range(study.rating_scale.min_value, study.rating_scale.max_value + 1) %}
-                                <div class="rating-option" data-rating="{{ i }}" data-element="{{ element.element_id }}">
-                                    <div class="rating-circle">{{ i }}</div>
-                                    <span class="rating-label">
-                                        {% if i == study.rating_scale.min_value %}{{ study.rating_scale.min_label }}
-                                        {% elif i == study.rating_scale.max_value %}{{ study.rating_scale.max_label }}
-                                        {% else %}{{ i }}{% endif %}
-                                    </span>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
                 </div>
             {% endfor %}
+        </div>
+
+        <!-- Task Rating Section -->
+        <div class="task-rating-section">
+            <h3 class="rating-title">Rate this task:</h3>
+            <div class="rating-scale">
+                {% for i in range(study.rating_scale.min_value, study.rating_scale.max_value + 1) %}
+                    <div class="rating-option" data-rating="{{ i }}">
+                        <div class="rating-circle">{{ i }}</div>
+                        <span class="rating-label">
+                            {% if i == study.rating_scale.min_value %}{{ study.rating_scale.min_label }}
+                            {% elif i == study.rating_scale.max_value %}{{ study.rating_scale.max_label }}
+                            {% else %}{{ i }}{% endif %}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
         </div>
 
         <!-- Task Navigation -->
@@ -77,45 +94,27 @@
             {% endif %}
         </div>
     </div>
-
-    <!-- Task Timer Display (Optional) -->
-    <div class="task-timer">
-        <span class="timer-label">Time on this task:</span>
-        <span id="taskTimer" class="timer-value">0:00</span>
-    </div>
 </div>
 
 <script>
-// Initialize TaskTimer
+// Initialize TaskTimer (hidden from user)
 let taskTimer;
 let taskStartTime;
 
-// Start timing when page loads
+// Start timing when page loads (background)
 document.addEventListener('DOMContentLoaded', function() {
     taskStartTime = new Date();
-    
-
     
     // Initialize TaskTimer
     taskTimer = new TaskTimer('{{ study.id }}', '{{ current_task.task_id }}', '{{ study.share_token }}');
     taskTimer.startTask();
     
-    // Start visual timer
-    startVisualTimer();
-    
-    // Check if all elements are rated
+    // Check rating completion and auto-advance
     checkRatingCompletion();
+    
+    // Track element interactions (background)
+    trackElementInteractions();
 });
-
-// Visual timer update
-function startVisualTimer() {
-    setInterval(() => {
-        const elapsed = Math.floor((new Date() - taskStartTime) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-        document.getElementById('taskTimer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }, 1000);
-}
 
 // Check rating completion and auto-advance
 function checkRatingCompletion() {
@@ -136,7 +135,7 @@ function checkRatingCompletion() {
             this.classList.add('loading');
             
             try {
-                // Complete current task
+                // Complete current task (background timing)
                 await taskTimer.completeTask({ task_rating: taskRating });
                 
                 // Auto-advance to next task
@@ -162,24 +161,26 @@ function checkRatingCompletion() {
     });
 }
 
-// Track element interactions
-document.querySelectorAll('.element-card').forEach(card => {
-    const elementId = card.dataset.elementId;
-    
-    // Track hover
-    card.addEventListener('mouseenter', () => {
-        if (taskTimer) {
-            taskTimer.trackElementInteraction(elementId, 'hover');
-        }
+// Track element interactions (background)
+function trackElementInteractions() {
+    document.querySelectorAll('.element-card').forEach(card => {
+        const elementId = card.dataset.elementId;
+        
+        // Track hover
+        card.addEventListener('mouseenter', () => {
+            if (taskTimer) {
+                taskTimer.trackElementInteraction(elementId, 'hover');
+            }
+        });
+        
+        // Track clicks
+        card.addEventListener('click', () => {
+            if (taskTimer) {
+                taskTimer.trackElementInteraction(elementId, 'click');
+            }
+        });
     });
-    
-    // Track clicks
-    card.addEventListener('click', () => {
-        if (taskTimer) {
-            taskTimer.trackElementInteraction(elementId, 'click');
-        }
-    });
-});
+}
 </script>
 
 <!-- Include TaskTimer script -->

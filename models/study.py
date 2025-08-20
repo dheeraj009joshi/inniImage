@@ -1,3 +1,4 @@
+from random import choice
 from mongoengine import Document, StringField, ReferenceField, DateTimeField, BooleanField, IntField, ListField, DictField, EmbeddedDocument, EmbeddedDocumentField, URLField
 from datetime import datetime
 import numpy as np
@@ -6,8 +7,8 @@ import uuid
 
 class RatingScale(EmbeddedDocument):
     """Embedded document for rating scale configuration."""
-    min_value = IntField(required=True, min_value=1, max_value=10)
-    max_value = IntField(required=True, min_value=1, max_value=10)
+    min_value = IntField(required=True, min_value=1, max_value=9)
+    max_value = IntField(required=True, choices=[ 5, 7, 9])
     min_label = StringField(required=True, max_length=100)
     max_label = StringField(required=True, max_length=100)
     middle_label = StringField(max_length=100)  # Optional middle label
@@ -18,21 +19,29 @@ class StudyElement(EmbeddedDocument):
     name = StringField(required=True, max_length=100)
     description = StringField(max_length=500)
     element_type = StringField(required=True, choices=['image', 'text'])
+    
     content = StringField(required=True)  # File path for images, text content for text
     alt_text = StringField(max_length=200)  # For accessibility
+
+class LayerCategory(EmbeddedDocument):
+    """Embedded document for layer study categories (A, B, C, D, etc.)."""
+    category_id = StringField(required=True, max_length=10)  # A, B, C, D, etc.
+    category_name = StringField(required=True, max_length=100)
+    elements = ListField(EmbeddedDocumentField(StudyElement), required=True)
+    order = IntField(required=True)
 
 class ClassificationQuestion(EmbeddedDocument):
     """Embedded document for classification questions."""
     question_id = StringField(required=True, max_length=10)
     question_text = StringField(required=True, max_length=500)
-    question_type = StringField(required=True, choices=['single_choice', 'multiple_choice', 'text_input'])
+    question_type = StringField(choices=['single_choice', 'multiple_choice', 'text', 'number', 'date'])
     answer_options = ListField(StringField(max_length=200))  # For choice questions
     is_required = BooleanField(default=False)
     order = IntField(required=True)
 
 class IPEDParameters(EmbeddedDocument):
     """Embedded document for IPED study parameters."""
-    num_elements = IntField(required=True, min_value=4, max_value=16)
+    num_elements = IntField(required=True, min_value=1, max_value=100)
     tasks_per_consumer = IntField(required=True, min_value=1, max_value=100)
     number_of_respondents = IntField(required=True, min_value=1, max_value=10000)
     min_active_elements = IntField(required=True, min_value=1, max_value=20)
@@ -51,9 +60,16 @@ class Study(Document):
     orientation_text = StringField(required=True, max_length=51000)
     
     # Study Type and Configuration
-    study_type = StringField(required=True, choices=['image', 'text'])
+    study_type = StringField(required=True, choices=['grid', 'layer'])
     rating_scale = EmbeddedDocumentField(RatingScale, required=True)
-    elements = ListField(EmbeddedDocumentField(StudyElement), required=True)
+    
+    # Grid Study Elements (for grid study type)
+    elements = ListField(EmbeddedDocumentField(StudyElement))  # Optional for layer studies
+    
+    # Layer Study Categories (for layer study type)
+    layer_categories = ListField(EmbeddedDocumentField(LayerCategory))  # Optional for grid studies
+    
+    # Common fields
     classification_questions = ListField(EmbeddedDocumentField(ClassificationQuestion))
     iped_parameters = EmbeddedDocumentField(IPEDParameters, required=True)
     
@@ -137,7 +153,19 @@ class Study(Document):
                 # Create elements_shown dictionary
                 elements_shown = {}
                 for i, element_name in enumerate(element_names):
-                    elements_shown[element_name] = int(task_data[i])
+                    # Element is only shown if it's active in this task
+                    element_active = int(task_data[i])
+                    elements_shown[element_name] = element_active
+                    
+                    # Element content is only shown if the element itself is shown
+                    if element_active and self.elements and i < len(self.elements):
+                        print(f"DEBUG: Element {i}: {self.elements[i]}")
+                        print(f"DEBUG: Element content: {getattr(self.elements[i], 'content', 'NO_CONTENT_ATTR')}")
+                        elements_shown[f"{element_name}_content"] = getattr(self.elements[i], 'content', '')
+                    else:
+                        print(f"DEBUG: Element {i} not active or no content available")
+                        elements_shown[f"{element_name}_content"] = ""
+
                 
                 task_obj = {
                     "task_id": f"{respondent_id}_{task_index}",

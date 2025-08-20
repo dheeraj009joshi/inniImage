@@ -5,71 +5,61 @@
 {% block content %}
 <div class="study-creation-container">
     <!-- Progress Bar -->
-    <div class="step-progress">
-        <ul class="step-progress-list">
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1a</div>
-                <span class="step-progress-label">Basic Details</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1b</div>
-                <span class="step-progress-label">Study Type</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">1c</div>
-                <span class="step-progress-label">Rating Scale</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">2a</div>
-                <span class="step-progress-label">Elements</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">2b</div>
-                <span class="step-progress-label">Questions</span>
-            </li>
-            <li class="step-progress-item step-progress-item--completed">
-                <div class="step-progress-circle">2c</div>
-                <span class="step-progress-label">IPED Parameters</span>
-            </li>
-            <li class="step-progress-item step-progress-item--active">
-                <div class="step-progress-circle">3a</div>
-                <span class="step-progress-label">Generate Tasks</span>
-            </li>
-            <li class="step-progress-item">
-                <div class="step-progress-circle">3b</div>
-                <span class="step-progress-label">Launch</span>
-            </li>
-        </ul>
-    </div>
+    {% set study_type = draft.get_step_data('1b').get('study_type', 'grid') if draft.get_step_data('1b') else 'grid' %}
+    <!-- Debug: Study Type = {{ study_type }} -->
+            {{ study_progress_bar('3a', study_type, draft) }}
 
     <div class="step-content">
         <div class="step-header">
             <h1 class="step-title">Step 3a: Generate IPED Task Matrix</h1>
-            <p class="step-description">Generate the IPED task matrix based on your configuration</p>
+            <p class="step-description">
+                {% if study_type == 'grid' %}
+                    Generate the IPED task matrix based on your configuration
+                {% else %}
+                    Layer study task matrix generation is not implemented yet
+                {% endif %}
+            </p>
         </div>
 
     <div class="step-content">
         <div class="study-form-container">
-            {% if not tasks_matrix %}
-            <div class="study-form-group">
-                <h3 class="section-title">Generate IPED Task Matrix</h3>
-                <p class="form-help">Click the button below to generate the IPED task matrix based on your configuration. This will create a balanced distribution of tasks for all respondents.</p>
-                
-                <form method="POST" class="step-form" data-validate="true" data-loading="true">
-                    {{ form.hidden_tag() }}
-                    
-                    <div class="study-form-group">
-                        {{ form.regenerate_matrix.label(class="study-form-label") }}
-                        {{ form.regenerate_matrix(class="form-check-input") }}
-                        <small class="form-help">Check this if you want to regenerate with a different random seed</small>
+            {% if study_type == 'layer' %}
+                <!-- Layer Study - Not Implemented -->
+                <div class="study-form-group">
+                    <div class="not-implemented-message">
+                        <div class="message-icon">🚧</div>
+                        <h3 class="section-title">Not Implemented Yet</h3>
+                        <p class="form-help">
+                            Task matrix generation for layer studies is not implemented yet. 
+                            This feature will be available in a future update.
+                        </p>
+                        <div class="step-actions">
+                            <a href="{{ url_for('study_creation.step2c') }}" class="btn btn--secondary step-nav-btn">← Previous</a>
+                            <button type="button" class="btn btn--primary step-nav-btn" disabled>Generate Task Matrix</button>
+                        </div>
                     </div>
+                </div>
+            {% elif not tasks_matrix %}
+                <!-- Grid Study - Generate Matrix -->
+                <div class="study-form-group">
+                    <h3 class="section-title">Generate IPED Task Matrix</h3>
+                    <p class="form-help">Click the button below to generate the IPED task matrix based on your configuration. This will create a balanced distribution of tasks for all respondents.</p>
                     
-                    <div class="step-actions">
-                        <a href="{{ url_for('study_creation.step2c') }}" class="btn btn--secondary step-nav-btn">← Previous</a>
-                        {{ form.submit(class="btn btn--primary step-nav-btn") }}
-                    </div>
-                </form>
-            </div>
+                    <form method="POST" class="step-form" data-validate="true" data-loading="true">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="study-form-group">
+                            {{ form.regenerate_matrix.label(class="study-form-label") }}
+                            {{ form.regenerate_matrix(class="form-check-input") }}
+                            <small class="form-help">Check this if you want to regenerate with a different random seed</small>
+                        </div>
+                        
+                        <div class="step-actions">
+                            <a href="{{ url_for('study_creation.step2c') }}" class="btn btn--secondary step-nav-btn">← Previous</a>
+                            {{ form.submit(class="btn btn--primary step-nav-btn") }}
+                        </div>
+                    </form>
+                </div>
             {% else %}
             
             <div class="study-form-group">
@@ -108,7 +98,7 @@
                             {% if first_respondent %}
                                 {% set respondent_id, tasks = first_respondent %}
                                 <div class="respondent-tasks">
-                                    <h5>Respondent {{ respondent_id }} (Sample)</h5>
+                                    <h5>Respondent {{ respondent_id|int +1 }} (Sample)</h5>
                                     <p class="text-muted">Showing tasks for one respondent. All respondents receive unique task combinations.</p>
                                     
                                     <div class="task-list-container">
@@ -116,13 +106,27 @@
                                             {% for task in tasks %}
                                             <div class="task-item">
                                                 <span class="task-number">Task {{ loop.index }}</span>
-                                                <span class="task-elements">
+                                                <div class="task-elements">
                                                     {% for element_name, is_active in task.elements_shown.items() %}
-                                                    {% if is_active %}
-                                                    <span class="element-tag">{{ element_name }}</span>
-                                                    {% endif %}
+                                                        {% if is_active and not element_name.endswith('_content') %}
+                                                            {% set content_key = element_name + '_content' %}
+                                                            {% set image_url = task.elements_shown.get(content_key, '') %}
+                                                            {% if image_url %}
+                                                                <div class="task-element-image">
+                                                                    <img src="{{ image_url }}" 
+                                                                         alt="{{ element_name }}" 
+                                                                         class="element-thumbnail"
+                                                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                                    <!-- <div class="image-fallback" style="display: none;">
+                                                                        <span class="element-tag">{{ element_name }}</span>
+                                                                    </div> -->
+                                                                </div>
+                                                            {% else %}
+                                                                <span class="element-tag">{{ element_name }}</span>
+                                                            {% endif %}
+                                                        {% endif %}
                                                     {% endfor %}
-                                                </span>
+                                                </div>
                                             </div>
                                             {% endfor %}
                                         </div>
@@ -190,7 +194,147 @@
     </div>
 </div>
 
+<!-- Error Display Modal -->
+<div class="modal-overlay" id="errorModal">
+    <div class="modal-container">
+        <div class="modal-header error-header">
+            <h3 class="modal-title">⚠️ Error</h3>
+            <button type="button" class="modal-close" onclick="closeErrorModal()">
+                <span>&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="errorContent">
+                <!-- Error content will be loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--secondary" onclick="closeErrorModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Image Preview Modal -->
+<div class="modal-overlay" id="imagePreviewModal">
+    <div class="modal-container image-preview-container">
+        <div class="modal-header">
+            <h3 class="modal-title">Element Preview</h3>
+            <button type="button" class="modal-close" onclick="closeImagePreview()">
+                <span>&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="imagePreviewContent">
+                <!-- Image preview will be loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn--secondary" onclick="closeImagePreview()">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
+// Form submission handling
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.step-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="loading-spinner"></span> Generating Tasks...';
+            }
+        });
+    }
+    
+    // Check for flash messages and display them
+    checkFlashMessages();
+});
+
+// Check for flash messages
+function checkFlashMessages() {
+    // Look for Flask flash messages in the DOM
+    const flashMessages = document.querySelectorAll('.flash-message, .alert, [class*="flash"], [class*="alert"]');
+    
+    flashMessages.forEach(message => {
+        const messageText = message.textContent || message.innerText;
+        const isError = message.className.includes('error') || message.className.includes('danger');
+        
+        if (isError) {
+            showErrorModal(messageText);
+        }
+    });
+}
+
+// Show error modal
+function showErrorModal(errorMessage) {
+    const modal = document.getElementById('errorModal');
+    const content = document.getElementById('errorContent');
+    
+    if (modal && content) {
+        content.innerHTML = `
+            <div class="error-message">
+                <p>${errorMessage}</p>
+            </div>
+        `;
+        modal.classList.add('modal-active');
+    }
+}
+
+// Close error modal
+function closeErrorModal() {
+    const modal = document.getElementById('errorModal');
+    if (modal) {
+        modal.classList.remove('modal-active');
+    }
+}
+
+// Image Preview Modal Functions
+function showImagePreview(imageUrl, elementName) {
+    const modal = document.getElementById('imagePreviewModal');
+    const content = document.getElementById('imagePreviewContent');
+    
+    if (modal && content) {
+        content.innerHTML = `
+            <div class="image-preview-content">
+                <h4>${elementName}</h4>
+                <div class="preview-image-container">
+                    <img src="${imageUrl}" 
+                         alt="${elementName}" 
+                         class="preview-image"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <div class="preview-error" style="display: none;">
+                        <p>Failed to load image</p>
+                        <small>URL: ${imageUrl}</small>
+                    </div>
+                </div>
+            </div>
+        `;
+        modal.classList.add('modal-active');
+    }
+}
+
+function closeImagePreview() {
+    const modal = document.getElementById('imagePreviewModal');
+    if (modal) {
+        modal.classList.remove('modal-active');
+    }
+}
+
+// Make task element images clickable
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click event listeners to all task element images
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('element-thumbnail')) {
+            const imageUrl = event.target.src;
+            const elementName = event.target.alt;
+            showImagePreview(imageUrl, elementName);
+        }
+    });
+});
+
 function downloadMatrix() {
     // Create CSV content
     const matrix = {{ tasks_matrix|tojson|safe }};
@@ -226,16 +370,19 @@ function showMatrixStats() {
     let totalTasks = 0;
     const elementFrequency = {};
     const activeElementsCounts = {};
+    let totalElementSelections = 0;
     
     Object.values(matrix).forEach(tasks => {
         totalTasks += tasks.length;
         tasks.forEach(task => {
-            // Count active elements
+            // Count active elements (excluding _content entries)
             let activeCount = 0;
             Object.entries(task.elements_shown).forEach(([element, isActive]) => {
-                if (isActive) {
+                // Only count actual elements, not content entries
+                if (isActive && !element.endsWith('_content')) {
                     activeCount++;
                     elementFrequency[element] = (elementFrequency[element] || 0) + 1;
+                    totalElementSelections++;
                 }
             });
             activeElementsCounts[activeCount] = (activeElementsCounts[activeCount] || 0) + 1;
@@ -269,10 +416,6 @@ function showMatrixStats() {
                 <div class="stat-item">
                     <span class="stat-label">Elements per Task Range:</span>
                     <span class="stat-value">${minElements}-${maxElements}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Matrix Density:</span>
-                    <span class="stat-value">${maxElements > 0 ? ((totalTasks * (minElements + maxElements) / 2) / (totalRespondents * step2cData.num_elements) * 100).toFixed(1) : 0}%</span>
                 </div>
             </div>
             
@@ -320,15 +463,25 @@ function closeMatrixStats() {
 // Close modal when clicking outside
 document.addEventListener('click', function(event) {
     const modal = document.getElementById('matrixStatsModal');
+    const errorModal = document.getElementById('errorModal');
+    
     if (event.target === modal) {
-        closeMatrixStats();
+        modal.classList.remove('modal-active');
+    }
+    
+    if (event.target === errorModal) {
+        errorModal.classList.remove('modal-active');
     }
 });
 
 // Close modal with Escape key
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
-        closeMatrixStats();
+        const modal = document.getElementById('matrixStatsModal');
+        const errorModal = document.getElementById('errorModal');
+        
+        if (modal) modal.classList.remove('modal-active');
+        if (errorModal) errorModal.classList.remove('modal-active');
     }
 });
 </script>

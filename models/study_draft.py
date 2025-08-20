@@ -13,7 +13,9 @@ class StudyDraft(Document):
     step1a_data = DictField(default={})
     step1b_data = DictField(default={})
     step1c_data = DictField(default={})
+    step1c_layer_data = DictField(default={})  # For layer study category setup
     step2a_data = DictField(default={})
+    step2a_layer_data = DictField(default={})  # For layer study categories and elements
     step2b_data = DictField(default={})
     step2c_data = DictField(default={})
     step3a_data = DictField(default={})
@@ -49,11 +51,31 @@ class StudyDraft(Document):
     def is_step_complete(self, step):
         """Check if a specific step is complete."""
         step_data = self.get_step_data(step)
-        return bool(step_data)
+        
+        # For layer-specific steps, check if they have meaningful data
+        if step == '1c_layer':
+            # Check if num_categories is set
+            return bool(step_data.get('num_categories'))
+        elif step == '2a_layer':
+            # Check if categories data exists
+            return bool(step_data.get('categories'))
+        else:
+            # For other steps, check if any data exists
+            return bool(step_data)
     
     def can_proceed_to_step(self, target_step):
         """Check if user can proceed to a specific step."""
-        step_order = ['1a', '1b', '1c', '2a', '2b', '2c', '3a', '3b']
+        # Get study type to determine the correct flow
+        study_type = self.get_step_data('1b').get('study_type', 'grid')
+        
+        if study_type == 'layer':
+            step_order = ['1a', '1b', '1c', '1c_layer', '2a_layer', '2b', '2c', '3a', '3b']
+        else:
+            step_order = ['1a', '1b', '1c', '2a', '2b', '2c', '3a', '3b']
+            
+        if target_step not in step_order:
+            return False
+            
         target_index = step_order.index(target_step)
         
         # For forward navigation, require previous steps to be complete
@@ -64,18 +86,38 @@ class StudyDraft(Document):
     
     def can_access_step(self, target_step):
         """Check if user can access a specific step (for navigation)."""
-        step_order = ['1a', '1b', '1c', '2a', '2b', '2c', '3a', '3b']
+        # Get study type to determine the correct flow
+        study_type = self.get_step_data('1b').get('study_type', 'grid')
+        
+        if study_type == 'layer':
+            step_order = ['1a', '1b', '1c', '1c_layer', '2a_layer', '2b', '2c', '3a', '3b']
+        else:
+            step_order = ['1a', '1b', '1c', '2a', '2b', '2c', '3a', '3b']
+            
+        if target_step not in step_order:
+            return False
+            
         target_index = step_order.index(target_step)
         
-        # For navigation (including going back), only require step1a to be complete
+        # For navigation (including going back), allow access to completed steps
         if target_index == 0:  # step1a
             return True
         elif target_index == 1:  # step1b
             return self.is_step_complete('1a')
-        elif target_index == 2:  # step1c
+        elif target_step == '1c':  # step1c (Rating Scale) - common for both study types
             return self.is_step_complete('1a') and self.is_step_complete('1b')
-        else:  # steps 2a and beyond
+        elif target_step == '1c_layer':  # step1c_layer (Categories) - only for layer studies
             return self.is_step_complete('1a') and self.is_step_complete('1b') and self.is_step_complete('1c')
+        elif target_step in ['2a', '2a_layer']:  # Elements step (varies by study type)
+            if target_step == '2a':  # Grid study elements
+                return self.is_step_complete('1a') and self.is_step_complete('1b') and self.is_step_complete('1c')
+            else:  # Layer study categories & elements
+                return self.is_step_complete('1a') and self.is_step_complete('1b') and self.is_step_complete('1c') and self.is_step_complete('1c_layer')
+        else:  # steps 2b and beyond
+            return (self.is_step_complete('1a') and self.is_step_complete('1b') and 
+                   self.is_step_complete('1c') and
+                   (self.is_step_complete('1c_layer') or True) and  # 1c_layer only required for layer studies
+                   (self.is_step_complete('2a') or self.is_step_complete('2a_layer')))
     
     def get_all_data(self):
         """Get all collected data as a dictionary."""
@@ -83,7 +125,9 @@ class StudyDraft(Document):
             'step1a': self.step1a_data,
             'step1b': self.step1b_data,
             'step1c': self.step1c_data,
+            'step1c_layer': self.step1c_layer_data,
             'step2a': self.step2a_data,
+            'step2a_layer': self.step2a_layer_data,
             'step2b': self.step2b_data,
             'step2c': self.step2c_data,
             'step3a': self.step3a_data,
@@ -104,7 +148,9 @@ class StudyDraft(Document):
             'step1a_data': self.step1a_data,
             'step1b_data': self.step1b_data,
             'step1c_data': self.step1c_data,
+            'step1c_layer_data': self.step1c_layer_data,
             'step2a_data': self.step2a_data,
+            'step2a_layer_data': self.step2a_layer_data,
             'step2b_data': self.step2b_data,
             'step2c_data': self.step2c_data,
             'step3a_data': self.step3a_data,

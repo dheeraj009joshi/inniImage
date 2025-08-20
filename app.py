@@ -71,6 +71,8 @@ def create_app(config_name='default'):
     # Initialize CSRF protection
     csrf.init_app(app)
     
+
+    
     # Configure session management for persistence
     app.config['PERMANENT_SESSION_LIFETIME'] = 3600 * 24 * 30  # 30 days
     app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
@@ -80,10 +82,12 @@ def create_app(config_name='default'):
 
     app.register_blueprint(index_bp)
     app.register_blueprint(auth_bp)
-    app.register_blueprint(study_creation_bp)
     app.register_blueprint(study_participation_bp)
+    app.register_blueprint(study_creation_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(api_bp)
+    
+
     
     # User loader for Flask-Login
     @login_manager.user_loader
@@ -215,7 +219,7 @@ def create_tables():
 if __name__ == '__main__':
     app = create_app()
     
-    # Create database indexes if they don't exist
-    create_tables()
+    # # Create database indexes if they don't exist
+    # create_tables()
     
     app.run(debug=True, host='0.0.0.0', port=51000)

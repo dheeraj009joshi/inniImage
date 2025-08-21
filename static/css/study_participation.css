@@ -80,7 +80,7 @@
 }
 
 .form-subtitle {
-    font-size: 1.125rem;
+    font-size:small;
     color: var(--participation-secondary);
     line-height: 1.6;
 }
@@ -231,10 +231,29 @@
 /* Rating Grid */
 .rating-grid {
     display: flex;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 0.5rem;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
     margin: 0.5rem 0;
     justify-content: center;
+    align-items: center;
+    overflow-x: auto;
+    padding: 0.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--participation-border) transparent;
+}
+
+/* Custom scrollbar for webkit browsers */
+.rating-grid::-webkit-scrollbar {
+    height: 4px;
+}
+
+.rating-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.rating-grid::-webkit-scrollbar-thumb {
+    background: var(--participation-border);
+    border-radius: 2px;
 }
 
 .rating-option {
@@ -248,8 +267,10 @@
 }
 
 .rating-label {
-    display: block;
-    padding: 0.5rem 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.2rem;
     border: 2px solid var(--participation-border);
     border-radius: var(--participation-radius);
     background: var(--participation-bg);
@@ -257,10 +278,9 @@
     cursor: pointer;
     transition: var(--participation-transition);
     user-select: none;
-    min-height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    min-height: 35px;
+    min-width: 35px;
+    flex-shrink: 0;
 }
 
 .rating-label:hover {
@@ -437,7 +457,7 @@
 .task-element-img {
     width: 100%;
     height: 100%;
-    min-height: 160px;
+    min-height: 120px;
     object-fit: contain;
     border-radius: 6px;
     border: 1px solid var(--participation-border);
@@ -469,6 +489,8 @@
 
 /* Rating Section */
 .rating-section {
+    font-size: small;
+    font-weight: 500;
     text-align: center;
     margin-top: 1rem;
     padding: 0.75rem;
@@ -902,7 +924,10 @@
     
     .task-element-img {
         min-height: 140px;
+        max-height: 170px;
+        max-width: 130px;
     }
+    
     
     .orientation-text,
     .main-question {
@@ -929,9 +954,15 @@
         margin-bottom: 0.4rem;
     }
     
+
+    .rating-instructions {
+        display: flex;
+        column-gap: 1rem;
+    }
     .rating-instructions p {
         font-size: 0.7rem;
         margin: 0.15rem 0;
+       
     }
     
     .btn {

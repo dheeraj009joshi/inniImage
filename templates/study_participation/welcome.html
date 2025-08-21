@@ -13,11 +13,19 @@
             <h1 class="study-title">{{ study.title }}</h1>
             <p class="study-description">{{ study.description or 'Thank you for participating in this research study.' }}</p>
         </div>
-        
+        <div class="start-study-section">
+            <form method="POST" action="{{ url_for('study_participation.personal_info', study_id=study._id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="start-study-btn">
+                    <span class="btn-text">Start Study</span>
+                    <span class="btn-icon">→</span>
+                </button>
+            </form>
+        </div>
         <div class="study-info">
             <div class="info-item">
                 <span class="info-label">Estimated Time:</span>
-                <span class="info-value">15-20 minutes</span>
+                <span class="info-value">3-5 minutes</span>
             </div>
             <div class="info-item">
                 <span class="info-label">Study Type:</span>
@@ -25,7 +33,7 @@
             </div>
             {% if study.iped_parameters %}
             <div class="info-item">
-                <span class="info-label">Total Tasks:</span>
+                <span class="info-label">Total Vignettes:</span>
                 <span class="info-value">{{ study.iped_parameters.tasks_per_consumer  }}</span>
             </div>
             {% endif %}
@@ -55,15 +63,7 @@
             </div>
         </div>
         
-        <div class="start-study-section">
-            <form method="POST" action="{{ url_for('study_participation.personal_info', study_id=study._id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="start-study-btn">
-                    <span class="btn-text">Start Study</span>
-                    <span class="btn-icon">→</span>
-                </button>
-            </form>
-        </div>
+        
         
         <div class="study-footer">
             <p class="footer-text">This study has been approved by our research ethics board. Your participation is voluntary and appreciated.</p>

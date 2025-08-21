@@ -265,6 +265,7 @@ canvas,
 svg {
     display: block;
     max-width: 100%;
+
 }
 
 /* Inherit fonts for inputs and buttons */
